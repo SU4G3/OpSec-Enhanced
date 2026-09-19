@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://i.ibb.co/1thx2zGX/photo-2026-09-19-17-42-43.jpg" alt="opsectransparent" width="15%"/>
+<img src="https://github.com/user-attachments/assets/9adba640-2570-4c22-9355-4f13aa5d4507" alt="opsectransparent" width="15%"/>
 </p>
 <h1 align="center">OpSec Enhanced</h1>
 

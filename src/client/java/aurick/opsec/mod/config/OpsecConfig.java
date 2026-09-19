@@ -62,6 +62,14 @@ public class OpsecConfig {
     /*public static final boolean MC_VERSION_HAS_BLOCK_LOCAL_URLS = false;
     *///?}
 
+    // HUD Indicator: not yet available on 26.1+ — see OpsecHud's javadoc for why.
+    // Gates the settings-menu toggle so it isn't offered where it can't do anything.
+    //? if <26.1 {
+    public static final boolean MC_VERSION_HAS_HUD_INDICATOR = true;
+    //?} else {
+    /*public static final boolean MC_VERSION_HAS_HUD_INDICATOR = false;
+    *///?}
+
     private static volatile OpsecConfig INSTANCE;
     private static final Object LOCK = new Object();
 

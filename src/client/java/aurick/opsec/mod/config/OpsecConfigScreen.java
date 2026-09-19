@@ -409,10 +409,13 @@ public class OpsecConfigScreen extends Screen {
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_COMPACT_LAYOUT),
                 (button, value) -> { settings.setCompactLayout(value); config.save(); refreshScreen(); }));
 
-        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isShowHudIndicator())
-                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_SHOW_HUD)))
-                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_SHOW_HUD),
-                (button, value) -> { settings.setShowHudIndicator(value); config.save(); }));
+        // Not offered on 26.1+ — see OpsecHud's javadoc: the toggle would do nothing there.
+        if (OpsecConfig.MC_VERSION_HAS_HUD_INDICATOR) {
+            widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isShowHudIndicator())
+                    .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_SHOW_HUD)))
+                    .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_SHOW_HUD),
+                    (button, value) -> { settings.setShowHudIndicator(value); config.save(); }));
+        }
 
         // Server Profile Section — only meaningful while the config screen was
         // opened with an active connection (e.g. via Mod Menu's in-game/pause

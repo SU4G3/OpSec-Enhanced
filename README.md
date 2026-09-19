@@ -93,6 +93,10 @@ If settings are changed while connected to a server it is recommended to reconne
 
 | Setting | Description |
 |---------|-------------|
+| **Accent Color** | Cosmetic accent used for the HUD indicator and the multiplayer-screen "OpSec" button |
+| **Compact Layout** | Tighter row spacing in this settings menu |
+| **Show HUD Indicator** | Small on-screen label showing your current spoof brand. **Not available on 26.1+** (Fabric API's HUD rendering moved to a new pipeline there that isn't wired up yet) |
+| **Custom Profile For This Server** | Save/clear a settings snapshot tied to the currently-connected server address. Only shown when the config screen is opened with an active connection |
 | **Show Alerts** | Display chat messages when tracking is detected |
 | **Show Toasts** | Display popup notifications for important events |
 | **Log Detections** | Log all detection events to game log for transparency |
@@ -108,6 +112,9 @@ If settings are changed while connected to a server it is recommended to reconne
 | **Add Session Token** | Add a new account using a session (access) token |
 | **Import** | Import accounts from a JSON file |
 | **Export** | Export accounts to a JSON file |
+| **Randomize Skin** | Uploads a procedurally-generated flat-color skin for the currently logged-in account, via Mojang's official skin API |
+| **Randomize Cape** | Picks a random cape from the ones the current account actually owns (or clears it) |
+| **Random name button** | On the offline/cracked account screen — fills the username field with a randomly generated name |
 
 ### Debug Commands
 

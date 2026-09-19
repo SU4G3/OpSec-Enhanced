@@ -9,6 +9,8 @@ import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
@@ -63,8 +65,16 @@ public class OpsecConfig {
     private static volatile OpsecConfig INSTANCE;
     private static final Object LOCK = new Object();
 
-    private SpoofSettings settings = new SpoofSettings();
+    // The saved global defaults. getSettings() returns `settings`, which points here
+    // unless a per-server profile is currently active (see setCurrentServer) — every
+    // existing settings.xxx() call site in this class and elsewhere in the mod keeps
+    // working unmodified either way, since it's always reading through the same field.
+    private SpoofSettings defaultSettings = new SpoofSettings();
+    private volatile SpoofSettings settings = defaultSettings;
+    private final Map<String, SpoofSettings> serverProfiles = new ConcurrentHashMap<>();
+
     private volatile String currentServer = null;
+    private volatile boolean serverConnected = false;
 
     private OpsecConfig() {
         load();
@@ -123,7 +133,7 @@ public class OpsecConfig {
                 Opsec.LOGGER.warn(
                     "[OpSec] Config file is empty, using defaults"
                 );
-                settings = new SpoofSettings();
+                resetToDefaults();
                 save();
                 return;
             }
@@ -131,34 +141,49 @@ public class OpsecConfig {
             JsonObject json = JsonParser.parseString(content).getAsJsonObject();
 
             if (json.has("settings")) {
-                settings = SpoofSettings.fromJson(
+                defaultSettings = SpoofSettings.fromJson(
                     json.getAsJsonObject("settings")
                 );
             } else if (json.has("defaultSettings")) {
-                settings = SpoofSettings.fromJson(
+                defaultSettings = SpoofSettings.fromJson(
                     json.getAsJsonObject("defaultSettings")
                 );
             }
+            settings = defaultSettings;
 
-            if (!validateAndCorrectSettings(settings)) {
+            serverProfiles.clear();
+            if (json.has("serverProfiles")) {
+                JsonObject profiles = json.getAsJsonObject("serverProfiles");
+                for (String address : profiles.keySet()) {
+                    try {
+                        SpoofSettings profile = SpoofSettings.fromJson(profiles.getAsJsonObject(address));
+                        validateAndCorrectSettings(profile);
+                        serverProfiles.put(address, profile);
+                    } catch (Exception e) {
+                        Opsec.LOGGER.warn("[OpSec] Dropping malformed server profile for '{}': {}", address, e.getMessage());
+                    }
+                }
+            }
+
+            if (!validateAndCorrectSettings(defaultSettings)) {
                 Opsec.LOGGER.warn(
                     "[OpSec] Config validation failed, resetting to defaults"
                 );
-                settings = new SpoofSettings();
+                resetToDefaults();
                 save();
                 return;
             }
 
             Opsec.LOGGER.info(
-                "[OpSec] Loaded config - spoofAsVanilla: {}",
-                settings.isSpoofAsVanilla()
+                "[OpSec] Loaded config - spoofAsVanilla: {}, {} server profile(s)",
+                defaultSettings.isSpoofAsVanilla(), serverProfiles.size()
             );
         } catch (IOException e) {
             Opsec.LOGGER.error(
                 "[OpSec] Failed to read config file: {}",
                 e.getMessage()
             );
-            settings = new SpoofSettings();
+            resetToDefaults();
             save();
         } catch (
             com.google.gson.JsonSyntaxException
@@ -168,9 +193,16 @@ public class OpsecConfig {
                 "[OpSec] Invalid JSON in config file: {}",
                 e.getMessage()
             );
-            settings = new SpoofSettings();
+            resetToDefaults();
             save();
         }
+    }
+
+    /** Resets the active/default settings to fresh defaults and drops all server profiles. */
+    private void resetToDefaults() {
+        defaultSettings = new SpoofSettings();
+        settings = defaultSettings;
+        serverProfiles.clear();
     }
 
     /**
@@ -237,7 +269,17 @@ public class OpsecConfig {
     public void save() {
         try {
             JsonObject json = new JsonObject();
-            json.add("settings", settings.toJson());
+            // Always serialize defaultSettings here, not the currently-active `settings` —
+            // while a per-server profile is active, `settings` points at the profile
+            // object, and saving that into the global "settings" key would leak
+            // server-specific values into the defaults every other server sees.
+            json.add("settings", defaultSettings.toJson());
+
+            JsonObject profilesJson = new JsonObject();
+            for (Map.Entry<String, SpoofSettings> entry : serverProfiles.entrySet()) {
+                profilesJson.add(entry.getKey(), entry.getValue().toJson());
+            }
+            json.add("serverProfiles", profilesJson);
 
             Files.createDirectories(CONFIG_PATH.getParent());
 
@@ -268,12 +310,60 @@ public class OpsecConfig {
         return settings;
     }
 
+    /**
+     * Records the active server and swaps the active {@link #settings} to that
+     * server's saved profile, if one exists (falls back to {@link #defaultSettings}
+     * otherwise). {@code server == null} means disconnected: reverts to defaults.
+     *
+     * <p>{@link #currentServer} itself keeps its pre-existing "unknown" sentinel
+     * (via {@link #normalizeAddress}) for {@link #hasServerProfile}'s cache-bucketing
+     * caller; {@link #serverConnected} is the real connected/disconnected signal.</p>
+     */
     public void setCurrentServer(String server) {
         this.currentServer = normalizeAddress(server);
+        this.serverConnected = server != null;
+        if (!serverConnected) {
+            this.settings = defaultSettings;
+            return;
+        }
+        SpoofSettings profile = serverProfiles.get(currentServer);
+        this.settings = profile != null ? profile : defaultSettings;
     }
 
     public String getCurrentServer() {
         return currentServer;
+    }
+
+    /** True while actually connected to a server (as opposed to the config screen's disconnected "unknown" bucket). */
+    public boolean hasActiveServer() {
+        return serverConnected;
+    }
+
+    /** True when the currently-connected server has a saved per-server profile active. */
+    public boolean hasServerProfile() {
+        return serverConnected && serverProfiles.containsKey(currentServer);
+    }
+
+    /**
+     * Snapshots whatever settings are currently active (defaults, or an existing
+     * profile being edited further) into a new/updated profile for the connected
+     * server, and makes that snapshot the active settings going forward.
+     */
+    public void saveCurrentAsServerProfile() {
+        if (!serverConnected) return;
+        SpoofSettings profile = new SpoofSettings();
+        profile.copyFrom(this.settings);
+        serverProfiles.put(currentServer, profile);
+        this.settings = profile;
+        save();
+    }
+
+    /** Deletes the connected server's profile, if any, and reverts to global defaults. */
+    public void removeServerProfile() {
+        if (!serverConnected) return;
+        serverProfiles.remove(currentServer);
+        this.settings = defaultSettings;
+        save();
     }
 
     // Identity protection
@@ -381,6 +471,11 @@ public class OpsecConfig {
     // Privacy
     public boolean shouldDisableTelemetry() {
         return !TELEMETRY_MANAGED_EXTERNALLY && settings.isDisableTelemetry();
+    }
+
+    /** Whether clicking a server-sent copy-to-clipboard/run-command text should require confirmation first. */
+    public boolean shouldGuardChatLinks() {
+        return settings.isGuardChatLinks();
     }
 
     /**

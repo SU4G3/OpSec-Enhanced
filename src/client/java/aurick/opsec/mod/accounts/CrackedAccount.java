@@ -72,11 +72,9 @@ public class CrackedAccount implements Account {
             accessor.opsec$setUserApiService(UserApiService.OFFLINE);
 
             // Create profile key pair manager with offline service (no chat signing)
-            ProfileKeyPairManager profileKeyPairManager = ProfileKeyPairManager.create(
-                    UserApiService.OFFLINE,
-                    newUser,
-                    mc.gameDirectory.toPath()
-            );
+            // Offline accounts have no real chat-session key to fetch; skip the (otherwise
+            // pointless) attempt entirely rather than relying on UserApiService.OFFLINE to no-op.
+            ProfileKeyPairManager profileKeyPairManager = ProfileKeyPairManager.EMPTY_KEY_MANAGER;
             accessor.opsec$setProfileKeyPairManager(profileKeyPairManager);
 
             // Create social manager with offline service

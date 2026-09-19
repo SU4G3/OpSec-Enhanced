@@ -12,7 +12,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.UUID;
 
 /**
@@ -54,9 +57,31 @@ public class DownloadQueueMixin {
             return original;
         }
 
-        Path isolatedPath = cacheDir.resolve(accountId.toString()).resolve(packId.toString());
-        Opsec.LOGGER.debug("[OpSec] Isolating resource pack cache for account {} -> {}", accountId, isolatedPath);
+        // The server chooses `packId` itself (it's the push's own transaction UUID, not a
+        // hash of the pack's content) — two colluding servers can agree on the SAME packId
+        // ahead of time and both push it. Without a per-server bucket, the second server
+        // would find the first server's isolated folder already populated and could infer
+        // "this account already has this exact packId cached" purely from download timing,
+        // deanonymizing a returning player across two otherwise-unrelated servers even though
+        // they never share an account. Bucketing by server address closes that: a shared
+        // packId only collides for the same account AND the same server.
+        String serverBucket = opsec$serverBucket();
+        Path isolatedPath = cacheDir.resolve(accountId.toString()).resolve(serverBucket).resolve(packId.toString());
+        Opsec.LOGGER.debug("[OpSec] Isolating resource pack cache for account {} / server {} -> {}", accountId, serverBucket, isolatedPath);
         return isolatedPath;
+    }
+
+    private static String opsec$serverBucket() {
+        String server = OpsecConfig.getInstance().getCurrentServer();
+        if (server == null || server.isBlank()) return "unknown";
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(server.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash, 0, 8); // 16 hex chars — plenty to avoid collisions, short for a path segment
+        } catch (Exception e) {
+            Opsec.LOGGER.debug("[OpSec] Failed to hash server address for cache bucketing: {}", e.getMessage());
+            return "unknown";
+        }
     }
 }
 //?} else {

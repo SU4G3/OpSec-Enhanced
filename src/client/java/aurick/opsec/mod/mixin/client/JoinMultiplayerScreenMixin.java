@@ -1,5 +1,6 @@
 package aurick.opsec.mod.mixin.client;
 
+import aurick.opsec.mod.config.OpsecConfig;
 import aurick.opsec.mod.config.OpsecConfigScreen;
 import aurick.opsec.mod.config.UpdateChecker;
 import aurick.opsec.mod.config.UpdateScreen;
@@ -41,7 +42,7 @@ public abstract class JoinMultiplayerScreenMixin extends Screen {
     @Inject(method = "init", at = @At("TAIL"))
     private void opsec$addSettingsButton(CallbackInfo ci) {
         this.opsec$settingsButton = Button.builder(
-            Component.literal("OpSec"),
+            Component.literal(OpsecConfig.getInstance().getSettings().getAccentColor().code() + "OpSec"),
             button -> {
                 if (this.minecraft != null) {
                     //? if >=26.2 {

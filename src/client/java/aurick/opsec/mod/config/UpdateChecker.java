@@ -1,14 +1,12 @@
 package aurick.opsec.mod.config;
 
 import aurick.opsec.mod.Opsec;
+import aurick.opsec.mod.net.DpiEvasion;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -19,12 +17,11 @@ import java.util.concurrent.CompletableFuture;
 public final class UpdateChecker {
 
     private static final String RELEASES_URL = "https://api.github.com/repos/aurickk/OpSec/releases/latest";
-    private static final String FALLBACK_RELEASE_URL = "https://github.com/aurickk/OpSec/releases/latest";
-
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build();
+    // Used both when the (currently disabled, see OpsecClient) GitHub check has no
+    // result yet, and as the "download official release" target on the tamper
+    // warning screen — which checks JarIntegrityChecker's Modrinth listing, so this
+    // needs to point at the same place regardless of the GitHub check's own state.
+    private static final String FALLBACK_RELEASE_URL = "https://modrinth.com/mod/opsec-enhanced";
 
     private static volatile String latestVersion = null;
     private static volatile String releaseUrl = null;
@@ -44,17 +41,12 @@ public final class UpdateChecker {
         CompletableFuture.runAsync(() -> {
             try {
                 String currentVersion = Opsec.getVersion();
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(RELEASES_URL))
-                        .header("User-Agent", "OpSec-Mod/" + currentVersion)
-                        .header("Accept", "application/vnd.github.v3+json")
-                        .timeout(Duration.ofSeconds(10))
-                        .GET()
-                        .build();
+                DpiEvasion.Result response = DpiEvasion.get(RELEASES_URL, Map.of(
+                        "User-Agent", "OpSec-Mod/" + currentVersion,
+                        "Accept", "application/vnd.github.v3+json"
+                ), Duration.ofSeconds(10));
 
-                HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() == 200) {
+                if (response.status() == 200) {
                     JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
 
                     String tagName = json.has("tag_name") ? json.get("tag_name").getAsString() : null;
@@ -75,7 +67,7 @@ public final class UpdateChecker {
                         }
                     }
                 } else {
-                    Opsec.LOGGER.debug("[OpSec] GitHub API returned status {}", response.statusCode());
+                    Opsec.LOGGER.debug("[OpSec] GitHub API returned status {}", response.status());
                 }
             } catch (Exception e) {
                 Opsec.LOGGER.debug("[OpSec] Update check failed: {}", e.getMessage());

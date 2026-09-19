@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class Opsec {
 	public static final String MOD_ID = "opsec";
-	public static final String MOD_NAME = "OpSec";
+	public static final String MOD_NAME = "OpSec Enhanced";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	// Bounded + DiscardPolicy so a probe flood can't grow the queue without bound and OOM.

@@ -36,7 +36,8 @@
 		"PacketProcessorMixin",
 		"PacketUtilsMixin",
 		"TabNavigationBarMixin",
-		"TitleScreenMixin"
+		"TitleScreenMixin",
+		"ChatClickGuardMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

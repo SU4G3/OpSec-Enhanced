@@ -289,6 +289,25 @@ public class PrivacyLogger {
         portScanSummaryShown.set(false);
     }
 
+    // Matches JWT-shaped tokens (header.payload.signature) and long opaque bearer-style
+    // tokens/secrets (20+ base64url characters) that auth API error bodies can echo back.
+    // Cheap `contains`/length guard below skips the regex entirely for ordinary log lines.
+    private static final java.util.regex.Pattern SECRET_PATTERN = java.util.regex.Pattern.compile(
+        "eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}" // JWT
+        + "|[A-Za-z0-9_-]{40,}" // long opaque token/secret run
+    );
+
+    /**
+     * Redacts token-shaped substrings (JWTs, long opaque bearer tokens) from text before it
+     * reaches a log file or crash report. Intended for the handful of call sites that log
+     * truncated external API response bodies, which can otherwise echo a secret back verbatim
+     * on certain error responses.
+     */
+    public static String redactSecrets(String text) {
+        if (text == null || text.length() < 40) return text;
+        return SECRET_PATTERN.matcher(text).replaceAll("[REDACTED]");
+    }
+
     private static String extractHostPort(String url) {
         try {
             URI uri = new URI(url);

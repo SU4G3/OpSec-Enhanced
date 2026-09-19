@@ -16,8 +16,8 @@ import net.minecraft.Util;
 //?}
 
 /**
- * Warning screen displayed when the running jar's SHA-256 does not match the
- * official GitHub release asset. Shows expected vs actual hashes and offers
+ * Warning screen displayed when the running jar's SHA-512 does not match the
+ * official Modrinth release file. Shows expected vs actual hashes and offers
  * options to download the official release or dismiss the warning.
  *
  * All text is rendered via StringWidget (not raw drawCenteredString) for compatibility

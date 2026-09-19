@@ -2,9 +2,9 @@ package aurick.opsec.mod;
 
 import aurick.opsec.mod.accounts.AccountManager;
 import aurick.opsec.mod.command.OpsecCommand;
-import aurick.opsec.mod.config.OpsecConfig;
 import aurick.opsec.mod.config.JarIntegrityChecker;
-import aurick.opsec.mod.config.UpdateChecker;
+import aurick.opsec.mod.config.OpsecConfig;
+import aurick.opsec.mod.hud.OpsecHud;
 import aurick.opsec.mod.protection.PackStripOverlay;
 import aurick.opsec.mod.protection.ShaderStripTracker;
 import aurick.opsec.mod.tracking.ModRegistry;
@@ -47,12 +47,20 @@ public class OpsecClient implements ClientModInitializer {
 		OpsecConfig.getInstance();
 		OpsecCommand.register();
 		AccountManager.getInstance(); // Load saved accounts
+		OpsecHud.register();
 
-		// Check for mod updates (non-blocking)
-		UpdateChecker.checkForUpdate();
-
-		// Check jar integrity against GitHub release (non-blocking)
+		// JarIntegrityChecker now checks this fork's own Modrinth listing
+		// (modrinth.com/mod/opsec-enhanced) rather than aurickk/OpSec's GitHub
+		// releases, so it's safe to run: it won't misfire against the unrelated
+		// upstream jar/version history anymore.
 		JarIntegrityChecker.checkIntegrity();
+
+		// UpdateChecker still points at aurickk/OpSec's own GitHub releases (see
+		// RELEASES_URL in UpdateChecker) — that's upstream's version history, not
+		// this fork's, so it would nag users to "update" into the unmodified
+		// original. Leave disabled until it's pointed at this fork's own release
+		// feed (e.g. the Modrinth API, mirroring JarIntegrityChecker above).
+		// UpdateChecker.checkForUpdate();
 
 		// Scan for registered channels after all mods have initialized
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {

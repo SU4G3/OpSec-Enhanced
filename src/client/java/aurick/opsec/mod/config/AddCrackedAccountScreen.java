@@ -4,6 +4,7 @@ import aurick.opsec.mod.accounts.AccountManager;
 import aurick.opsec.mod.accounts.CrackedAccount;
 import aurick.opsec.mod.lang.OpsecLang;
 import aurick.opsec.mod.lang.OpsecStrings;
+import aurick.opsec.mod.util.RandomNameGenerator;
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
 /*import net.minecraft.client.gui.GuiGraphicsExtractor;*/
@@ -25,6 +26,7 @@ public class AddCrackedAccountScreen extends Screen {
 
     private final Screen parent;
     private EditBox usernameInput;
+    private Button randomNameButton;
     private Button addButton;
     private Button cancelButton;
     private Component statusMessage;
@@ -53,13 +55,22 @@ public class AddCrackedAccountScreen extends Screen {
                 this.font,
                 centerX - 150,
                 centerY - 30,
-                300,
+                256,
                 20,
                 OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_USERNAME_LABEL)
         );
         this.usernameInput.setMaxLength(16);
         this.usernameInput.setHint(OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_USERNAME_HINT));
         this.addRenderableWidget(this.usernameInput);
+
+        // Random name generator — fills the field, doesn't submit.
+        this.randomNameButton = Button.builder(
+                OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_RANDOM_NAME_BUTTON),
+                button -> this.usernameInput.setValue(RandomNameGenerator.generate())
+        ).bounds(centerX + 110, centerY - 30, 40, 20)
+         .tooltip(net.minecraft.client.gui.components.Tooltip.create(OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_RANDOM_NAME_TOOLTIP)))
+         .build();
+        this.addRenderableWidget(this.randomNameButton);
 
         // Status label
         this.statusLabel = new StringWidget(centerX - 150, centerY + 35, 300, 20, Component.literal(""), this.font);

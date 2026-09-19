@@ -1,35 +1,20 @@
 <p align="center">
 <img src="https://github.com/user-attachments/assets/9adba640-2570-4c22-9355-4f13aa5d4507" alt="opsectransparent" width="15%"/>
 </p>
-<h1 align="center">OpSec</h1>
+<h1 align="center">OpSec Enhanced</h1>
 
 
 <p align="center">A client-side Minecraft mod that provides protection against client fingerprinting, tracking exploits, and other privacy focused features.</p>
 
-<p align="center">
-<a href="https://modrinth.com/mod/opsec"><img alt="Modrinth Downloads" src="https://img.shields.io/modrinth/dt/opsec?logo=modrinth&logoColor=white&label=Modrinth&color=00AF5C"></a>
-<a href="https://modrinth.com/mod/opsec/versions"><img alt="Supported Minecraft Versions" src="https://img.shields.io/badge/Available%20for-1.20%20%E2%80%93%2026.2-00AF5C"></a>
-<a href="https://www.curseforge.com/minecraft/mc-mods/opsec"><img alt="CurseForge Downloads" src="https://img.shields.io/curseforge/dt/1519411?logo=curseforge&logoColor=white&label=Curseforge&color=F16436"></a>
-<a href="https://www.curseforge.com/minecraft/mc-mods/opsec"><img alt="Supported Minecraft Versions" src="https://img.shields.io/badge/Available%20for-1.20%20%E2%80%93%2026.2-F16436"></a>
-<a href="https://github.com/aurickk/OpSec/releases"><img alt="GitHub Downloads" src="https://img.shields.io/github/downloads/aurickk/OpSec/total?logo=github&logoColor=white&label=GitHub&color=6e5494"></a>
-<a href="https://github.com/aurickk/OpSec/releases/latest"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/aurickk/OpSec?logo=github&logoColor=white&label=Release&color=6e5494"></a>
-</p>
-
+> [!NOTE]
+> **OpSec Enhanced** is an independently modified fork of [aurickk/OpSec](https://github.com/aurickk/OpSec) (upstream is no longer actively maintained), published separately at [modrinth.com/mod/opsec-enhanced](https://modrinth.com/mod/opsec-enhanced). It is not affiliated with the original author. The mod checks its own jar's hash against this fork's Modrinth listing on startup (not upstream's) and warns if they don't match — do not treat a jar claiming to be this mod from anywhere else as official.
 
 > [!WARNING]
 > This is a passion project built and maintained with **AI**.
 
-> [!IMPORTANT]
-> Fake phishing sites and Discord servers has been distributing **trojanized** builds of OpSec. Only download OpSec from these official sources:
-> - **[Modrinth](https://modrinth.com/mod/opsec)**
-> - **[GitHub Releases](https://github.com/aurickk/OpSec/releases)**
-> - **[CurseForge](https://www.curseforge.com/minecraft/mc-mods/opsec)** (updated less frequently)
->
-> Builds from anywhere else are not official and may be malicious.
-
 ## What it does 
 
-- **[Spoof as Vanilla](#spoof-as-vanilla)** - Set brand name to vanilla and block all mod detections
+- **[Client Spoofer](#client-spoofer)** - Spoof as vanilla (or another known client) and block all mod detections
 - **[Channel Spoofing](#channel-spoofing)** - Conditionally block mod network channels to prevent detection
 - **[Known-Pack Filtering](#known-pack-filtering)** - Conditionally strip built-in pack identifiers from the configuration handshake
 - **[Isolate Pack Cache](#isolate-pack-cache)** - Isolate resource packs per-account to prevent tracking
@@ -43,6 +28,17 @@
 - **[Account Manager](#account-manager)** - Switch between Minecraft accounts using session tokens
 - **[Telemetry Blocking](#telemetry-blocking)** - Disable data collection sent to Mojang
 
+### OpSec Enhanced additions
+
+- **Encrypted Account Storage** - Saved session/refresh tokens are AES-256-GCM encrypted at rest instead of stored as plaintext, with an owner-only-permissioned key file
+- **Skin/Cape Correlation Alerts** - Warns when two saved accounts share the same active skin or cape texture, since that's a real way to link a "main" and an "alt" together
+- **Chat Link/Command Guard** - Requires confirmation before a clicked chat/sign/book message copies to your clipboard or runs a command (vanilla does both instantly, unlike `OPEN_URL`), plus an extra heads-up before opening links shaped like phishing/IP-grabber patterns (raw IP, punycode, look-alike characters)
+- **Per-Server Pack Cache Isolation** - Extends Isolate Pack Cache to also bucket by server address, closing a side-channel where two colluding servers could share a resource-pack push ID to detect a returning player across servers even without sharing an account
+- **Chat Session Key Lockdown** - Skips the Mojang chat-session key-pair fetch entirely when Chat Signing is OFF, instead of only stripping the outgoing per-message signature
+- **Sensitive Log Redaction** - Strips token-shaped strings from logged authentication error responses before they hit the log file
+- **[Spoof As Options](#spoof-as-options)** - While spoofing as vanilla, optionally advertise as Lunar Client or Badlion Client instead
+- **[DPI Evasion (TLS Fragmentation)](#dpi-evasion-tls-fragmentation)** - Splits the mod's own update/integrity-check HTTPS handshake to dodge naive SNI-based connection blocking
+
 > If you're interested in servers or plugins that are using tracking related exploits then look in the [Hall of Shame](https://github.com/NikOverflow/ExploitPreventer/blob/master/HALL_OF_SHAME.md).
 
 ## Requirements
@@ -55,7 +51,7 @@
 
 1. Install [Fabric Loader](https://fabricmc.net/use/) for your Minecraft version
 2. Download the latest [Fabric API](https://modrinth.com/mod/fabric-api) for your Minecraft version
-3. Download the latest `opsec-[minecraft_version]+[version].jar` from the [Releases](https://github.com/aurickk/OpSec/releases/) page
+3. Download the latest `opsec-[minecraft_version]+[version].jar` from [Modrinth](https://modrinth.com/mod/opsec-enhanced) or the [Releases](https://github.com/SU4G3/OpSec-Enhanced/releases/) page
 4. Place both mods in your `.minecraft/mods` folder
 5. Launch Minecraft
 
@@ -72,7 +68,9 @@ If settings are changed while connected to a server it is recommended to reconne
 
 | Setting | Description |
 |---------|-------------|
-| **Spoof as vanilla** | Enable/disable [Spoof as Vanilla](#spoof-as-vanilla) |
+| **Client Spoofer** | Enable/disable [Client Spoofer](#client-spoofer) |
+| **Spoof As** | While Client Spoofer is on, choose the advertised brand: Vanilla (default), Lunar Client, or Badlion Client. See [Spoof As Options](#spoof-as-options) |
+| **Fragment TLS Handshake** | Enable/disable [DPI Evasion](#dpi-evasion-tls-fragmentation) for the mod's own update/integrity-check requests |
 | **Isolate Pack Cache** | Enable/disable [cache isolation](#isolate-pack-cache) |
 | **Block Local Pack URLs** | Enable/disable [local URL blocking](#block-local-urls) |
 | **Bypass Server Pack Requirement** | Configure [server pack bypass](#bypass-server-pack-requirement) behavior:<br/>• **MANUAL** (default): Default vanilla behavior on push. You can still toggle any server pack.<br/>• **ASK**: Server resource pack not applied but with consent screen to ask if the pack(s) should be applied<br/>• **ALWAYS ON**: Server resource pack not applied by default. You can still toggle any server pack |
@@ -130,7 +128,7 @@ The `/opsec` command is **off by default** (enable it in Misc → Debug Command)
 
 ## Feature Details
 
-### Spoof as Vanilla
+### Client Spoofer
 
 Servers can query your client brand to detect whether you're running a modded client. OpSec provides true vanilla spoofing by blocking all mod key resolutions, network channels, and known-pack identifiers (whilst keeping vanilla ones).
 
@@ -138,6 +136,35 @@ Servers can query your client brand to detect whether you're running a modded cl
 - **OFF** - Appear as a standard Fabric client (default)
 
 Set to OFF by default to allow auto mod whitelisting (whitelist mods with network channels).
+
+---
+
+### Spoof As Options
+
+While Client Spoofer is on, you can pick which brand string OpSec advertises instead of plain `vanilla`:
+
+| Option | Brand sent | Channel behavior | Notes |
+|--------|-----------|-------------------|-------|
+| **Vanilla** (default) | `vanilla` | Identical to real vanilla | Always accurate, accepted by any server that allows vanilla clients at all |
+| **Lunar Client** | `lunarclient:v<version>,fabric` | Identical to vanilla mode (all mod channels blocked) | Lunar's own client uses this vanilla-like network behavior to pass anti-cheat brand checks. OpSec does **not** implement Lunar's proprietary cosmetics protocol behind the `lunarclient:pm` channel some server plugins also check for, so a server doing that specific check may still notice. The version suffix (default `v1.21.11-704,fabric`) is a point-in-time snapshot and will go stale as Lunar ships new builds — edit `lunarVersionSuffix` in `opsec.json` to update it |
+| **Badlion Client** | `badlion` | Identical to vanilla mode (all mod channels blocked) | Badlion doesn't register its own plugin channels either, and its brand pattern has no version component, so this option can't go stale the way Lunar's can |
+
+**Why these and not others:** every option here only changes the outbound brand *string* — the underlying channel/known-pack/key-resolution behavior is always identical to plain vanilla mode, because that's what these two clients are documented to actually do on the wire (see [AntiSpoof](https://modrinth.com/plugin/antispoof)'s brand-pattern config and [lunarclient.dev/client-brand](https://lunarclient.dev/client-brand)). Getting this wrong — advertising a brand a server can then contradict via a follow-up check — is worse than not spoofing at all, so OpSec deliberately does not invent channel registrations or protocol responses it can't actually back up. These options only help against a server that denies the generic `vanilla` brand but allowlists specific "known" clients by name; that's an uncommon configuration, so Vanilla remains the safer default for most servers.
+
+---
+
+### DPI Evasion (TLS Fragmentation)
+
+Splits the TLS ClientHello of the mod's own background HTTPS requests (GitHub update check, jar integrity check) across two TCP segments instead of one, so a DPI middlebox that only inspects the first segment for the plaintext SNI hostname doesn't see the full hostname to filter on. This is the same idea used by [zapret](https://github.com/bol-van/zapret), [GoodbyeDPI](https://github.com/ValdikSS/GoodbyeDPI), and [ByeDPI](https://github.com/hufrea/byedpi), which are the actual right tools if the game connection itself (not covered here — see below) is being blocked.
+
+Off by default — enable it in Protection → Fragment TLS Handshake if you're in a region where these background checks are timing out or failing.
+
+**What it covers:** only requests made via OpSec's internal `DpiEvasion` helper — currently the GitHub update check and jar integrity check.
+
+**What it does *not* cover, and why:**
+- **Microsoft/Xbox/Minecraft-services login** (`SessionAccount`) — that path uses `java.net.http.HttpClient`, whose async engine talks to raw sockets via `SSLEngine` directly and never goes through a `SSLSocketFactory`, so there's no public API hook to fragment its handshake. If login itself is blocked in your region, run a system-level tool (zapret/GoodbyeDPI/ByeDPI) alongside the game.
+- **The actual Minecraft server connection** — that's a raw TCP socket carrying the Minecraft protocol, not TLS. There's no ClientHello to fragment. A blocked server IP/port needs a system-level bypass tool, not a client mod.
+- **IP-based blocking in general** — fragmentation only defeats DPI that inspects the SNI field. If the destination IP is null-routed or reset regardless of what's inside the packet, this does nothing.
 
 ---
 
@@ -198,7 +225,7 @@ https://wurst.wiki/sign_translation_vulnerability
 
 OpSec tracks when translation keys are being resolved during server packet processing and blocks Minecraft from resolving them based on your selected brand mode:
 
-#### Spoof as Vanilla Behavior
+#### Client Spoofer Behavior
 
 - **ON**: Blocks all mod keys, returns default keybind values for vanilla keys
 - **OFF**: Allows Fabric API and whitelisted mod keys, blocks everything else
@@ -277,7 +304,7 @@ This is enabled by default, its behavior is controlled by the mod whitelist and
 Servers can probe your mod-injected pack identifiers that certain mods exposes to detect whether you're running a modded client or using certain mods. 
 OpSec intercepts the outgoing `ServerboundSelectKnownPacks` response and strips entries belonging to non-whitelisted mods. Real vanilla and auto whitelisted packs still pass through.
 
-#### Spoof as Vanilla Behavior
+#### Client Spoofer Behavior
 
 - **ON**: Strips all mod-injected packs.
 - **OFF**: Keeps packs for whitelisted mods, strips the rest.
@@ -298,7 +325,7 @@ Some mods require server communication to function properly (e.g., VoiceChat, Xa
 - **AUTO** (default): Mods that register network channels are automatically whitelisted as they are the most likely to have server-side functionalities
 - **CUSTOM**: Manually select which mods to whitelist from the installed mod list
 
-When the whitelist is active (AUTO or CUSTOM), [Spoof as Vanilla](#spoof-as-vanilla) will be disabled as exposing Fabric mods would need the client brand to match accordingly.
+When the whitelist is active (AUTO or CUSTOM), [Client Spoofer](#client-spoofer) will be disabled as exposing Fabric mods would need the client brand to match accordingly.
 
 > [!NOTE]
 > CUSTOM mode lists every installed mod so any mod can be whitelisted; AUTO mode only shows mods that register network channels.
@@ -362,7 +389,7 @@ OpSec blocks telemetry sending to Mojang when telemetry blocking is enabled. Doe
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/aurickk/OpSec.git
+   git clone https://github.com/SU4G3/OpSec-Enhanced.git
    cd OpSec
    ```
 
@@ -417,6 +444,8 @@ Output JARs are located in `versions/<minecraft_version>/build/libs/`:
 - [MixinSquared](https://github.com/Bawnorton/MixinSquared) - Mixin cancellation for Meteor Fix
 - [Stonecutter](https://stonecutter.kikugie.dev/) - Multi-version build system
 - [Fabric API](https://github.com/FabricMC/fabric-api) - Fabric translation and keybind keys
+- [AntiSpoof](https://modrinth.com/plugin/antispoof) / [lunarclient.dev](https://lunarclient.dev/client-brand) - Client brand pattern sourcing for [Spoof As Options](#spoof-as-options)
+- [zapret](https://github.com/bol-van/zapret) / [GoodbyeDPI](https://github.com/ValdikSS/GoodbyeDPI) / [ByeDPI](https://github.com/hufrea/byedpi) - Reference implementations for the TCP-segment-splitting idea behind [DPI Evasion](#dpi-evasion-tls-fragmentation)
 
 ## Disclaimer
 

@@ -45,6 +45,37 @@ public class SpoofSettings {
     }
 
     /**
+     * Which brand string to advertise while {@link #spoofAsVanilla} is on. Only
+     * changes the outbound {@code brand} value — channel/known-pack/key-resolution
+     * behavior stays identical to plain vanilla mode (block everything non-vanilla)
+     * in every case, because that's what the sourcing below shows these clients
+     * actually do on the wire:
+     *
+     * <ul>
+     *   <li>Badlion Client registers no plugin channels of its own; server-side
+     *       brand allowlists match it on prefix {@code "badlion"}/{@code "BLC"}.
+     *       No version component, so this option can't go stale.</li>
+     *   <li>Lunar Client's brand is {@code "lunarclient:v<version>,fabric"}; some
+     *       servers additionally look for a {@code lunar.*} plugin channel or
+     *       validate the version format. OpSec does not implement Lunar's
+     *       proprietary cosmetics protocol behind that channel, so this option
+     *       only matches brand-string allowlists, not a strict per-channel check.
+     *       The version suffix is user-editable ({@link #lunarVersionSuffix})
+     *       instead of hardcoded, since a stale build number is itself a tell.</li>
+     * </ul>
+     *
+     * Picking one of these over plain vanilla only helps against a server that
+     * denies the generic vanilla brand but allowlists specific "known" clients —
+     * an uncommon setup. When in doubt, plain vanilla (DEFAULT) is the safer,
+     * always-accurate choice.
+     */
+    public enum BrandOverride {
+        DEFAULT,
+        LUNAR_CLIENT,
+        BADLION
+    }
+
+    /**
      * Bypass Server Pack Requirement modes.
      * Controls whether server-pushed resource packs have their visual/audio content
      * stripped (textures/sounds/models/fonts removed; lang data still applied so
@@ -61,7 +92,20 @@ public class SpoofSettings {
         /** No consent screen. Pack is always stripped; user may still toggle it on. */
         ALWAYS_ON
     }
-    
+
+    /** Accent color applied to the multiplayer-screen "OpSec" button and the config screen title. */
+    public enum AccentColor {
+        CYAN("§b"),
+        GREEN("§a"),
+        PURPLE("§d"),
+        ORANGE("§6"),
+        RED("§c");
+
+        private final String code;
+        AccentColor(String code) { this.code = code; }
+        public String code() { return code; }
+    }
+
     // Brand spoofing — when true, the client advertises a vanilla brand and blocks
     // ALL outbound custom payloads. When false, the natural Fabric brand passes
     // through and channels are filtered via the Whitelist tab (Block All / Auto /
@@ -69,6 +113,23 @@ public class SpoofSettings {
     // Auto/Custom — the resulting state would be incoherent (vanilla brand
     // advertising selective mod channels).
     private boolean spoofAsVanilla = false;
+
+    // Which brand string to send while spoofAsVanilla is on — see BrandOverride javadoc.
+    private BrandOverride brandOverride = BrandOverride.DEFAULT;
+    private String lunarVersionSuffix = OpsecConstants.Brands.LUNAR_CLIENT_DEFAULT_SUFFIX;
+
+    // Fragments the TLS ClientHello of the mod's own update-check / integrity-check
+    // HTTPS requests across multiple TCP segments, to dodge naive SNI-based DPI
+    // filtering (relevant in RU/CN/IR). Off by default: it's a narrow, speculative
+    // fix for a regional problem most users don't have, and only covers requests
+    // that go through DpiEvasion (not the Microsoft/Xbox login flow — see its
+    // javadoc for why that path can't use this technique).
+    private boolean dpiFragmentTlsHello = false;
+
+    // Appearance — purely cosmetic, no effect on protection behavior.
+    private AccentColor accentColor = AccentColor.CYAN;
+    private boolean compactLayout = false;
+    private boolean showHudIndicator = false;
 
     // Resource pack protection
     private boolean isolatePackCache = true;
@@ -101,6 +162,11 @@ public class SpoofSettings {
     
     // Privacy
     private boolean disableTelemetry = true;
+    // Require confirmation before a server-sent chat/sign/book click event copies to the
+    // clipboard or runs a client command — vanilla executes both with no prompt (unlike
+    // open-URL, which already confirms), so a crafted message can silently overwrite the
+    // clipboard (e.g. a scam address) or fire a command click.
+    private boolean guardChatLinks = true;
     
     // UI Settings
     private int buttonX = -1;
@@ -148,6 +214,28 @@ public class SpoofSettings {
         this.spoofAsVanilla = spoofAsVanilla;
     }
 
+    public BrandOverride getBrandOverride() { return brandOverride; }
+    public void setBrandOverride(BrandOverride override) { this.brandOverride = override != null ? override : BrandOverride.DEFAULT; }
+
+    public String getLunarVersionSuffix() { return lunarVersionSuffix; }
+    public void setLunarVersionSuffix(String suffix) {
+        this.lunarVersionSuffix = (suffix == null || suffix.isBlank())
+                ? OpsecConstants.Brands.LUNAR_CLIENT_DEFAULT_SUFFIX
+                : suffix.trim();
+    }
+
+    public boolean isDpiFragmentTlsHello() { return dpiFragmentTlsHello; }
+    public void setDpiFragmentTlsHello(boolean enabled) { this.dpiFragmentTlsHello = enabled; }
+
+    public AccentColor getAccentColor() { return accentColor; }
+    public void setAccentColor(AccentColor color) { this.accentColor = color != null ? color : AccentColor.CYAN; }
+
+    public boolean isCompactLayout() { return compactLayout; }
+    public void setCompactLayout(boolean compact) { this.compactLayout = compact; }
+
+    public boolean isShowHudIndicator() { return showHudIndicator; }
+    public void setShowHudIndicator(boolean show) { this.showHudIndicator = show; }
+
     public boolean isIsolatePackCache() { return isolatePackCache; }
     public void setIsolatePackCache(boolean isolatePackCache) { this.isolatePackCache = isolatePackCache; }
     
@@ -194,6 +282,9 @@ public class SpoofSettings {
 
     public boolean isDisableTelemetry() { return disableTelemetry; }
     public void setDisableTelemetry(boolean disableTelemetry) { this.disableTelemetry = disableTelemetry; }
+
+    public boolean isGuardChatLinks() { return guardChatLinks; }
+    public void setGuardChatLinks(boolean guardChatLinks) { this.guardChatLinks = guardChatLinks; }
     
     public int[] getButtonPosition() {
         if (buttonX < 0 || buttonY < 0) return null;
@@ -233,7 +324,12 @@ public class SpoofSettings {
     public void setTamperWarningDismissed(boolean dismissed) { this.tamperWarningDismissed = dismissed; }
 
     public String getEffectiveBrand() {
-        return spoofAsVanilla ? VANILLA : FABRIC;
+        if (!spoofAsVanilla) return FABRIC;
+        return switch (brandOverride) {
+            case LUNAR_CLIENT -> OpsecConstants.Brands.LUNAR_CLIENT_PREFIX + lunarVersionSuffix;
+            case BADLION -> OpsecConstants.Brands.BADLION_CLIENT;
+            case DEFAULT -> VANILLA;
+        };
     }
 
     public boolean isVanillaMode() {
@@ -247,6 +343,12 @@ public class SpoofSettings {
     public JsonObject toJson() {
         JsonObject json = new JsonObject();
         json.addProperty("spoofAsVanilla", spoofAsVanilla);
+        json.addProperty("brandOverride", brandOverride.name());
+        json.addProperty("lunarVersionSuffix", lunarVersionSuffix);
+        json.addProperty("dpiFragmentTlsHello", dpiFragmentTlsHello);
+        json.addProperty("accentColor", accentColor.name());
+        json.addProperty("compactLayout", compactLayout);
+        json.addProperty("showHudIndicator", showHudIndicator);
         json.addProperty("isolatePackCache", isolatePackCache);
         json.addProperty("blockLocalPackUrls", blockLocalPackUrls);
         json.addProperty("stripModShaders", stripModShaders);
@@ -261,6 +363,7 @@ public class SpoofSettings {
         json.addProperty("debugCommand", debugCommand);
         json.addProperty("signingMode", signingMode.name());
         json.addProperty("disableTelemetry", disableTelemetry);
+        json.addProperty("guardChatLinks", guardChatLinks);
         json.addProperty("buttonX", buttonX);
         json.addProperty("buttonY", buttonY);
         json.addProperty("skippedUpdateVersion", skippedUpdateVersion);
@@ -292,6 +395,24 @@ public class SpoofSettings {
             String cb = json.has("customBrand") ? json.get("customBrand").getAsString() : FABRIC;
             s.spoofAsVanilla = sb && VANILLA.equalsIgnoreCase(cb);
         }
+        if (json.has("brandOverride")) {
+            try {
+                s.brandOverride = BrandOverride.valueOf(json.get("brandOverride").getAsString());
+            } catch (IllegalArgumentException e) {
+                s.brandOverride = BrandOverride.DEFAULT;
+            }
+        }
+        if (json.has("lunarVersionSuffix")) s.setLunarVersionSuffix(json.get("lunarVersionSuffix").getAsString());
+        if (json.has("dpiFragmentTlsHello")) s.dpiFragmentTlsHello = json.get("dpiFragmentTlsHello").getAsBoolean();
+        if (json.has("accentColor")) {
+            try {
+                s.accentColor = AccentColor.valueOf(json.get("accentColor").getAsString());
+            } catch (IllegalArgumentException e) {
+                s.accentColor = AccentColor.CYAN;
+            }
+        }
+        if (json.has("compactLayout")) s.compactLayout = json.get("compactLayout").getAsBoolean();
+        if (json.has("showHudIndicator")) s.showHudIndicator = json.get("showHudIndicator").getAsBoolean();
         if (json.has("isolatePackCache")) s.isolatePackCache = json.get("isolatePackCache").getAsBoolean();
         if (json.has("blockLocalPackUrls")) s.blockLocalPackUrls = json.get("blockLocalPackUrls").getAsBoolean();
         if (json.has("stripModShaders")) s.stripModShaders = json.get("stripModShaders").getAsBoolean();
@@ -342,6 +463,7 @@ public class SpoofSettings {
             }
         }
         if (json.has("disableTelemetry")) s.disableTelemetry = json.get("disableTelemetry").getAsBoolean();
+        if (json.has("guardChatLinks")) s.guardChatLinks = json.get("guardChatLinks").getAsBoolean();
         if (json.has("buttonX")) s.buttonX = json.get("buttonX").getAsInt();
         if (json.has("buttonY")) s.buttonY = json.get("buttonY").getAsInt();
         if (json.has("skippedUpdateVersion")) s.skippedUpdateVersion = json.get("skippedUpdateVersion").getAsString();
@@ -385,6 +507,12 @@ public class SpoofSettings {
     
     public void copyFrom(SpoofSettings other) {
         this.spoofAsVanilla = other.spoofAsVanilla;
+        this.brandOverride = other.brandOverride;
+        this.lunarVersionSuffix = other.lunarVersionSuffix;
+        this.dpiFragmentTlsHello = other.dpiFragmentTlsHello;
+        this.accentColor = other.accentColor;
+        this.compactLayout = other.compactLayout;
+        this.showHudIndicator = other.showHudIndicator;
         this.isolatePackCache = other.isolatePackCache;
         this.blockLocalPackUrls = other.blockLocalPackUrls;
         this.stripModShaders = other.stripModShaders;
@@ -399,6 +527,7 @@ public class SpoofSettings {
         this.debugCommand = other.debugCommand;
         this.signingMode = other.signingMode;
         this.disableTelemetry = other.disableTelemetry;
+        this.guardChatLinks = other.guardChatLinks;
         this.buttonX = other.buttonX;
         this.buttonY = other.buttonY;
         this.skippedUpdateVersion = other.skippedUpdateVersion;

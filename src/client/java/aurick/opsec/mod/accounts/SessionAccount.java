@@ -1,8 +1,13 @@
 package aurick.opsec.mod.accounts;
 
 import aurick.opsec.mod.Opsec;
+import aurick.opsec.mod.PrivacyLogger;
+import aurick.opsec.mod.config.OpsecConfig;
 import aurick.opsec.mod.config.OpsecConstants;
 import aurick.opsec.mod.mixin.client.MinecraftAccessor;
+import aurick.opsec.mod.util.SkinRandomizer;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.minecraft.UserApiService;
@@ -43,6 +48,14 @@ public class SessionAccount implements Account {
     private long lastValidated;
     private boolean valid = true; // Assume valid until proven otherwise
     private String lastError = null; // Last error message for display in UI
+
+    // Active skin/cape texture hash (last path segment of the textures.minecraft.net URL),
+    // captured from the profile response. Used only for cross-account correlation warnings
+    // (see AccountManager#checkSkinCorrelation) — never sent anywhere, never a fingerprint
+    // we invent ourselves, just the same public texture id any server already sees.
+    private String skinTextureId;
+    private String capeTextureId;
+    private java.util.List<CapeInfo> ownedCapes = new java.util.ArrayList<>();
 
     // Common Azure client IDs for Minecraft authentication
     // The refresh token must be used with the same client ID that issued it
@@ -217,7 +230,8 @@ public class SessionAccount implements Account {
             this.uuid = formatUuid(json.get("id").getAsString());
             this.username = json.get("name").getAsString();
             this.lastValidated = System.currentTimeMillis();
-            
+            captureActiveTextures(json);
+
             Opsec.LOGGER.info("[OpSec] Validated account: {} ({})", username, uuid);
             return new ValidationResultWithRetry(ValidationResult.VALID, 0);
             
@@ -350,11 +364,13 @@ public class SessionAccount implements Account {
             accessor.opsec$setUserApiService(userApiService);
             
             // Reinitialize profile key pair manager (for chat signatures)
-            ProfileKeyPairManager profileKeyPairManager = ProfileKeyPairManager.create(
-                    userApiService, 
-                    newUser, 
-                    mc.gameDirectory.toPath()
-            );
+            // Signing OFF: never fetch/store a real chat-session key pair for this account.
+            // The per-message signature is already stripped elsewhere (ServerboundChatPacketMixin,
+            // ClientPacketListenerMixin) — this additionally skips the one-time Mojang key-service
+            // round trip that would otherwise happen on first use, and the local key pair file.
+            ProfileKeyPairManager profileKeyPairManager = OpsecConfig.getInstance().shouldNotSign()
+                    ? ProfileKeyPairManager.EMPTY_KEY_MANAGER
+                    : ProfileKeyPairManager.create(userApiService, newUser, mc.gameDirectory.toPath());
             accessor.opsec$setProfileKeyPairManager(profileKeyPairManager);
             
             // Reinitialize social manager
@@ -378,6 +394,171 @@ public class SessionAccount implements Account {
         }
     }
     
+    /**
+     * Records the active skin/cape texture ids from a {@code /minecraft/profile} response,
+     * for the skin-correlation check in {@link AccountManager}. Best-effort: any malformed
+     * or missing field just leaves the previous value in place.
+     */
+    private void captureActiveTextures(JsonObject profile) {
+        this.skinTextureId = findActiveTextureId(profile, "skins");
+        this.capeTextureId = findActiveTextureId(profile, "capes");
+        this.ownedCapes = findOwnedCapes(profile);
+    }
+
+    /** One cape this account owns and can select, per the {@code /minecraft/profile} response. */
+    public record CapeInfo(String id, String alias) {}
+
+    private static java.util.List<CapeInfo> findOwnedCapes(JsonObject profile) {
+        java.util.List<CapeInfo> capes = new java.util.ArrayList<>();
+        if (!profile.has("capes") || !profile.get("capes").isJsonArray()) return capes;
+        for (JsonElement element : profile.getAsJsonArray("capes")) {
+            try {
+                JsonObject entry = element.getAsJsonObject();
+                if (!entry.has("id")) continue;
+                String alias = entry.has("alias") ? entry.get("alias").getAsString() : entry.get("id").getAsString();
+                capes.add(new CapeInfo(entry.get("id").getAsString(), alias));
+            } catch (Exception ignored) {
+                // Malformed entry — skip it rather than fail the whole validation.
+            }
+        }
+        return capes;
+    }
+
+    private static String findActiveTextureId(JsonObject profile, String arrayField) {
+        if (!profile.has(arrayField) || !profile.get(arrayField).isJsonArray()) return null;
+        JsonArray array = profile.getAsJsonArray(arrayField);
+        for (int i = 0; i < array.size(); i++) {
+            try {
+                JsonObject entry = array.get(i).getAsJsonObject();
+                if (!entry.has("state") || !"ACTIVE".equals(entry.get("state").getAsString())) continue;
+                if (!entry.has("url")) continue;
+                String url = entry.get("url").getAsString();
+                int lastSlash = url.lastIndexOf('/');
+                return lastSlash >= 0 ? url.substring(lastSlash + 1) : url;
+            } catch (Exception ignored) {
+                // Malformed entry — skip it rather than fail the whole validation.
+            }
+        }
+        return null;
+    }
+
+    /** Texture id (URL hash) of the currently active skin, or {@code null} if not yet known. */
+    public String getSkinTextureId() { return skinTextureId; }
+
+    /** Texture id (URL hash) of the currently active cape, or {@code null} if none/not yet known. */
+    public String getCapeTextureId() { return capeTextureId; }
+
+    /** Capes this account owns and can select. Populated from the last successful {@link #fetchInfo()}. */
+    public java.util.List<CapeInfo> getOwnedCapes() { return java.util.Collections.unmodifiableList(ownedCapes); }
+
+    /**
+     * Uploads a procedurally-generated flat-color skin (see {@link SkinRandomizer})
+     * as this account's active skin, via the official Minecraft Services skin
+     * endpoint. Also fixes the mod's own Skin/Cape Correlation Alert when run on
+     * two accounts that currently share a skin.
+     * @return true on success; check {@link #getLastError()} on failure
+     */
+    public boolean randomizeSkin() {
+        if (accessToken == null || accessToken.isBlank()) {
+            this.lastError = "Missing token";
+            return false;
+        }
+        try {
+            byte[] png = SkinRandomizer.generateFlatColorSkinPng();
+            String variant = SkinRandomizer.randomVariant();
+            String boundary = "OpSecBoundary" + System.currentTimeMillis();
+            byte[] body = buildSkinMultipartBody(boundary, variant, png);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(OpsecConstants.AuthUrls.SKIN_URL))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .timeout(Duration.ofSeconds(OpsecConstants.Retry.HTTP_TIMEOUT_SECONDS))
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                    .build();
+
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                this.lastError = "Skin upload failed: HTTP " + response.statusCode();
+                Opsec.LOGGER.warn("[OpSec] {}", this.lastError);
+                return false;
+            }
+            Opsec.LOGGER.info("[OpSec] Randomized skin for {} (variant={})", username, variant);
+            return true;
+        } catch (Exception e) {
+            this.lastError = "Skin upload error: " + e.getMessage();
+            Opsec.LOGGER.error("[OpSec] {}", this.lastError);
+            return false;
+        }
+    }
+
+    private static byte[] buildSkinMultipartBody(String boundary, String variant, byte[] pngBytes) throws java.io.IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        String charset = "UTF-8";
+        out.write(("--" + boundary + "\r\n").getBytes(charset));
+        out.write(("Content-Disposition: form-data; name=\"variant\"\r\n\r\n").getBytes(charset));
+        out.write((variant + "\r\n").getBytes(charset));
+        out.write(("--" + boundary + "\r\n").getBytes(charset));
+        out.write(("Content-Disposition: form-data; name=\"file\"; filename=\"skin.png\"\r\n").getBytes(charset));
+        out.write(("Content-Type: image/png\r\n\r\n").getBytes(charset));
+        out.write(pngBytes);
+        out.write(("\r\n--" + boundary + "--\r\n").getBytes(charset));
+        return out.toByteArray();
+    }
+
+    /**
+     * Sets a random owned cape active (or clears the active cape entirely, one
+     * of the random outcomes) via the official capes endpoint.
+     * @return true on success; false with {@link #getLastError()} set if the
+     *         account owns no capes or the request fails
+     */
+    public boolean randomizeCape() {
+        if (accessToken == null || accessToken.isBlank()) {
+            this.lastError = "Missing token";
+            return false;
+        }
+        if (ownedCapes.isEmpty()) {
+            this.lastError = "This account owns no capes to choose from";
+            return false;
+        }
+        try {
+            // Random pick among owned capes, plus one extra "no cape" slot.
+            int pick = java.util.concurrent.ThreadLocalRandom.current().nextInt(ownedCapes.size() + 1);
+            HttpRequest request;
+            if (pick == ownedCapes.size()) {
+                request = HttpRequest.newBuilder()
+                        .uri(URI.create(OpsecConstants.AuthUrls.CAPE_ACTIVE_URL))
+                        .header("Authorization", "Bearer " + accessToken)
+                        .timeout(Duration.ofSeconds(OpsecConstants.Retry.HTTP_TIMEOUT_SECONDS))
+                        .DELETE()
+                        .build();
+            } else {
+                JsonObject body = new JsonObject();
+                body.addProperty("capeId", ownedCapes.get(pick).id());
+                request = HttpRequest.newBuilder()
+                        .uri(URI.create(OpsecConstants.AuthUrls.CAPE_ACTIVE_URL))
+                        .header("Authorization", "Bearer " + accessToken)
+                        .header("Content-Type", "application/json")
+                        .timeout(Duration.ofSeconds(OpsecConstants.Retry.HTTP_TIMEOUT_SECONDS))
+                        .PUT(HttpRequest.BodyPublishers.ofString(body.toString()))
+                        .build();
+            }
+
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200 && response.statusCode() != 204) {
+                this.lastError = "Cape change failed: HTTP " + response.statusCode();
+                Opsec.LOGGER.warn("[OpSec] {}", this.lastError);
+                return false;
+            }
+            Opsec.LOGGER.info("[OpSec] Randomized cape for {}", username);
+            return true;
+        } catch (Exception e) {
+            this.lastError = "Cape change error: " + e.getMessage();
+            Opsec.LOGGER.error("[OpSec] {}", this.lastError);
+            return false;
+        }
+    }
+
     /**
      * Formats a UUID string from undashed to dashed format.
      */
@@ -703,8 +884,9 @@ public class SessionAccount implements Account {
             boolean wasRateLimited = response.statusCode() == 429;
             
             if (response.statusCode() != 200) {
-                Opsec.LOGGER.debug("[OpSec] Xbox Live auth with ticket format failed: HTTP {} - {}", 
-                        response.statusCode(), response.body().substring(0, Math.min(200, response.body().length())));
+                String snippet = response.body().substring(0, Math.min(200, response.body().length()));
+                Opsec.LOGGER.debug("[OpSec] Xbox Live auth with ticket format failed: HTTP {} - {}",
+                        response.statusCode(), PrivacyLogger.redactSecrets(snippet));
                 return new TokenResult(null, retryAfterMs, wasRateLimited);
             }
             
@@ -830,31 +1012,39 @@ public class SessionAccount implements Account {
     public JsonObject toJson() {
         JsonObject json = new JsonObject();
         json.addProperty("type", "session");
-        json.addProperty("accessToken", accessToken);
+        json.addProperty("accessToken", AccountCrypto.encrypt(accessToken));
         if (refreshToken != null && !refreshToken.isBlank()) {
-            json.addProperty("refreshToken", refreshToken);
+            json.addProperty("refreshToken", AccountCrypto.encrypt(refreshToken));
         }
         json.addProperty("username", username);
         json.addProperty("uuid", uuid);
         json.addProperty("lastValidated", lastValidated);
         json.addProperty("valid", valid);
+        if (skinTextureId != null) json.addProperty("skinTextureId", skinTextureId);
+        if (capeTextureId != null) json.addProperty("capeTextureId", capeTextureId);
         return json;
     }
-    
+
     public static SessionAccount fromJson(JsonObject json) {
-        String token = json.has("accessToken") ? json.get("accessToken").getAsString() : "";
+        String token = json.has("accessToken") ? AccountCrypto.decrypt(json.get("accessToken").getAsString()) : "";
         String username = json.has("username") ? json.get("username").getAsString() : "";
         String uuid = json.has("uuid") ? json.get("uuid").getAsString() : "";
-        
+
         SessionAccount account = new SessionAccount(token, username, uuid);
         if (json.has("refreshToken")) {
-            account.refreshToken = json.get("refreshToken").getAsString();
+            account.refreshToken = AccountCrypto.decrypt(json.get("refreshToken").getAsString());
         }
         if (json.has("lastValidated")) {
             account.lastValidated = json.get("lastValidated").getAsLong();
         }
         if (json.has("valid")) {
             account.valid = json.get("valid").getAsBoolean();
+        }
+        if (json.has("skinTextureId")) {
+            account.skinTextureId = json.get("skinTextureId").getAsString();
+        }
+        if (json.has("capeTextureId")) {
+            account.capeTextureId = json.get("capeTextureId").getAsString();
         }
         return account;
     }

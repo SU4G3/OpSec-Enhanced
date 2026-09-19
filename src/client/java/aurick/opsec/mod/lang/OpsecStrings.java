@@ -30,10 +30,38 @@ public final class OpsecStrings {
     public static final String SECTION_RESTART_WARNING = "opsec.section.restartWarning";
     public static final String SECTION_DEBUG = "opsec.section.debug";
     public static final String ACCOUNT_CURRENT = "opsec.account.current";
+    public static final String SECTION_APPEARANCE_RANDOMIZER = "opsec.section.appearanceRandomizer";
+    public static final String BUTTON_RANDOMIZE_SKIN = "opsec.button.randomizeSkin";
+    public static final String BUTTON_RANDOMIZE_SKIN_TOOLTIP = "opsec.button.randomizeSkin.tooltip";
+    public static final String BUTTON_RANDOMIZE_CAPE = "opsec.button.randomizeCape";
+    public static final String BUTTON_RANDOMIZE_CAPE_TOOLTIP = "opsec.button.randomizeCape.tooltip";
+    public static final String APPEARANCE_RANDOMIZER_UNAVAILABLE = "opsec.appearanceRandomizer.unavailable";
     public static final String WHITELIST_SUFFIX_CHANNELS = "opsec.whitelist.suffix.channels";
 
     public static final String OPTION_SPOOF_AS_VANILLA = "opsec.option.spoofAsVanilla";
     public static final String OPTION_SPOOF_AS_VANILLA_TOOLTIP = "opsec.option.spoofAsVanilla.tooltip";
+
+    public static final String OPTION_BRAND_OVERRIDE = "opsec.option.brandOverride";
+    public static final String BRAND_OVERRIDE_VANILLA = "opsec.brandOverride.vanilla";
+    public static final String BRAND_OVERRIDE_VANILLA_TOOLTIP = "opsec.brandOverride.vanilla.tooltip";
+    public static final String BRAND_OVERRIDE_LUNAR = "opsec.brandOverride.lunar";
+    public static final String BRAND_OVERRIDE_LUNAR_TOOLTIP = "opsec.brandOverride.lunar.tooltip";
+    public static final String BRAND_OVERRIDE_BADLION = "opsec.brandOverride.badlion";
+    public static final String BRAND_OVERRIDE_BADLION_TOOLTIP = "opsec.brandOverride.badlion.tooltip";
+
+    public static final String OPTION_DPI_FRAGMENT_TLS = "opsec.option.dpiFragmentTls";
+    public static final String TOOLTIP_DPI_FRAGMENT_TLS = "opsec.option.dpiFragmentTls.tooltip";
+
+    public static final String SECTION_APPEARANCE = "opsec.section.appearance";
+    public static final String OPTION_ACCENT_COLOR = "opsec.option.accentColor";
+    public static final String OPTION_COMPACT_LAYOUT = "opsec.option.compactLayout";
+    public static final String TOOLTIP_COMPACT_LAYOUT = "opsec.option.compactLayout.tooltip";
+    public static final String OPTION_SHOW_HUD = "opsec.option.showHud";
+    public static final String TOOLTIP_SHOW_HUD = "opsec.option.showHud.tooltip";
+
+    public static final String SECTION_SERVER_PROFILE = "opsec.section.serverProfile";
+    public static final String OPTION_SERVER_PROFILE = "opsec.option.serverProfile";
+    public static final String TOOLTIP_SERVER_PROFILE = "opsec.option.serverProfile.tooltip";
 
     public static final String OPTION_WHITELIST_MODE = "opsec.option.whitelistMode";
     public static final String OPTION_WHITELIST_MODE_LOCKED_TOOLTIP = "opsec.option.whitelistMode.locked.tooltip";
@@ -78,6 +106,15 @@ public final class OpsecStrings {
 
     public static final String OPTION_CHAT_SIGNING = "opsec.option.chatSigning";
     public static final String OPTION_DISABLE_TELEMETRY = "opsec.option.disableTelemetry";
+    public static final String OPTION_GUARD_CHAT_LINKS = "opsec.option.guardChatLinks";
+
+    public static final String CHATGUARD_TITLE = "opsec.chatguard.title";
+    public static final String CHATGUARD_MESSAGE_COMMAND = "opsec.chatguard.message.command";
+    public static final String CHATGUARD_MESSAGE_CLIPBOARD = "opsec.chatguard.message.clipboard";
+    public static final String CHATGUARD_MESSAGE_SUSPICIOUS_URL = "opsec.chatguard.message.suspiciousUrl";
+
+    public static final String ALERT_SKIN_CORRELATION = "opsec.alert.skinCorrelation";
+    public static final String TOAST_SKIN_CORRELATION = "opsec.toast.skinCorrelation";
 
     public static final String OPTION_SHOW_ALERTS = "opsec.option.showAlerts";
     public static final String OPTION_SHOW_TOASTS = "opsec.option.showToasts";
@@ -205,6 +242,8 @@ public final class OpsecStrings {
     public static final String ACCOUNT_SCREEN_OFFLINE_TITLE = "opsec.account.screen.offline.title";
     public static final String ACCOUNT_SCREEN_USERNAME_LABEL = "opsec.account.screen.usernameLabel";
     public static final String ACCOUNT_SCREEN_USERNAME_HINT = "opsec.account.screen.usernameHint";
+    public static final String ACCOUNT_SCREEN_RANDOM_NAME_BUTTON = "opsec.account.screen.randomNameButton";
+    public static final String ACCOUNT_SCREEN_RANDOM_NAME_TOOLTIP = "opsec.account.screen.randomNameButton.tooltip";
     public static final String ACCOUNT_ERROR_EMPTY_USERNAME = "opsec.account.error.emptyUsername";
     public static final String ACCOUNT_STATUS_ADDING = "opsec.account.status.adding";
     public static final String ACCOUNT_SUCCESS_ADDED_OFFLINE = "opsec.account.success.addedOffline";
@@ -227,6 +266,7 @@ public final class OpsecStrings {
     public static final String TOOLTIP_FAKE_DEFAULT_KEYBINDS = "opsec.option.fakeDefaultKeybinds.tooltip";
     public static final String TOOLTIP_METEOR_FIX = "opsec.option.meteorFix.tooltip";
     public static final String TOOLTIP_DISABLE_TELEMETRY = "opsec.option.disableTelemetry.tooltip";
+    public static final String TOOLTIP_GUARD_CHAT_LINKS = "opsec.option.guardChatLinks.tooltip";
     public static final String TOOLTIP_SHOW_ALERTS = "opsec.option.showAlerts.tooltip";
     public static final String TOOLTIP_SHOW_TOASTS = "opsec.option.showToasts.tooltip";
     public static final String TOOLTIP_LOG_DETECTIONS = "opsec.option.logDetections.tooltip";

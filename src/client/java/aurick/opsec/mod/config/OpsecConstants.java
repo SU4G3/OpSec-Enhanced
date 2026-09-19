@@ -10,6 +10,13 @@ public final class OpsecConstants {
         public static final String VANILLA = "vanilla";
         public static final String FABRIC = "fabric";
 
+        // Brand strings observed for third-party clients that behave like vanilla
+        // over the wire (no custom plugin channels of their own on most servers) —
+        // see SpoofSettings.BrandOverride javadoc for sourcing and caveats.
+        public static final String LUNAR_CLIENT_PREFIX = "lunarclient:";
+        public static final String LUNAR_CLIENT_DEFAULT_SUFFIX = "v1.21.11-704,fabric";
+        public static final String BADLION_CLIENT = "badlion";
+
         private Brands() {}
     }
 
@@ -20,6 +27,8 @@ public final class OpsecConstants {
         public static final String XBOX_AUTH_URL = "https://user.auth.xboxlive.com/user/authenticate";
         public static final String XSTS_AUTH_URL = "https://xsts.auth.xboxlive.com/xsts/authorize";
         public static final String MC_AUTH_URL = "https://api.minecraftservices.com/authentication/login_with_xbox";
+        public static final String SKIN_URL = "https://api.minecraftservices.com/minecraft/profile/skins";
+        public static final String CAPE_ACTIVE_URL = "https://api.minecraftservices.com/minecraft/profile/capes/active";
 
         private AuthUrls() {}
     }

@@ -1,7 +1,10 @@
 package aurick.opsec.mod.accounts;
 
 import aurick.opsec.mod.Opsec;
+import aurick.opsec.mod.PrivacyLogger;
 import aurick.opsec.mod.config.OpsecConstants;
+import aurick.opsec.mod.lang.OpsecLang;
+import aurick.opsec.mod.lang.OpsecStrings;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -92,8 +95,39 @@ public class AccountManager {
         accounts.removeIf(a -> a.getUuid().equals(account.getUuid()));
         accounts.add(account);
         save();
-        
+        checkSkinCorrelation();
+
         Opsec.LOGGER.info("[OpSec] Added account: {} ({})", account.getUsername(), account.getUuid());
+    }
+
+    /**
+     * Warns when two saved accounts share the same active skin or cape texture. The client
+     * can't stop an online-mode server from seeing the real Mojang-signed profile of whichever
+     * account is logged in — that lookup happens server-side — so this can't be blocked the way
+     * a spoofed brand or channel can. What it CAN do is flag the one thing actually under the
+     * user's control: reusing the same skin/cape across a "main" and an "alt" account lets
+     * anyone who notices both link them together. Runs after add() and after every refresh.
+     */
+    private void checkSkinCorrelation() {
+        java.util.Map<String, java.util.List<String>> bySkin = new java.util.HashMap<>();
+        for (Account account : accounts) {
+            if (!(account instanceof SessionAccount sa)) continue;
+            String skin = sa.getSkinTextureId();
+            if (skin == null || skin.isBlank()) continue;
+            bySkin.computeIfAbsent(skin, k -> new java.util.ArrayList<>()).add(sa.getUsername());
+        }
+        for (java.util.List<String> names : bySkin.values()) {
+            if (names.size() < 2) continue;
+            String a = names.get(0);
+            String b = names.get(1);
+            Opsec.LOGGER.warn("[OpSec] Skin correlation: {} share the same active skin texture", names);
+            PrivacyLogger.alert(PrivacyLogger.AlertType.WARNING,
+                    OpsecLang.tr(OpsecStrings.ALERT_SKIN_CORRELATION, a, b));
+            PrivacyLogger.toastWithCooldown(PrivacyLogger.AlertType.WARNING,
+                    OpsecLang.tr(OpsecStrings.TOAST_SKIN_CORRELATION),
+                    "skin_correlation:" + a + ":" + b,
+                    aurick.opsec.mod.config.OpsecConstants.Timeouts.EXPLOIT_TOAST_COOLDOWN_MS);
+        }
     }
     
     /**
@@ -295,7 +329,8 @@ public class AccountManager {
                 }
                 
                 save();
-                
+                checkSkinCorrelation();
+
                 final int v = valid;
                 final int inv = invalid;
                 final int sk = skipped;

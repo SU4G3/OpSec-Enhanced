@@ -227,6 +227,16 @@ public class OpsecConfigScreen extends Screen {
                             config.save();
                             refreshScreen();
                     }));
+
+            // Brand override only means anything while spoofing as vanilla — channel
+            // behavior is identical in every case (see SpoofSettings.BrandOverride).
+            if (settings.isSpoofAsVanilla()) {
+                widgets.add(cycleBuilder(BrandOverrideDisplay::getDisplayName,
+                        List.of(SpoofSettings.BrandOverride.values()), settings.getBrandOverride())
+                        .withTooltip(v -> Tooltip.create(BrandOverrideDisplay.getTooltip(v)))
+                        .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_BRAND_OVERRIDE),
+                        (button, value) -> { settings.setBrandOverride(value); config.save(); refreshScreen(); }));
+            }
         }
 
         // Resource Pack Protection Section
@@ -369,12 +379,61 @@ public class OpsecConfigScreen extends Screen {
                     (button, value) -> { settings.setDisableTelemetry(value); config.save(); }));
         }
 
+        // Not EP-gated — clipboard/command click guarding is independent of the shared
+        // fingerprinting-protection feature set EP already covers.
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isGuardChatLinks())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_GUARD_CHAT_LINKS)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_GUARD_CHAT_LINKS),
+                (button, value) -> { settings.setGuardChatLinks(value); config.save(); }));
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isDpiFragmentTlsHello())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_DPI_FRAGMENT_TLS)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_DPI_FRAGMENT_TLS),
+                (button, value) -> { settings.setDpiFragmentTlsHello(value); config.save(); }));
+
         return new WidgetTab(OpsecLang.component(OpsecStrings.TAB_PROTECTION), widgets);
     }
     
     private Tab createMiscTab(SpoofSettings settings) {
         List<AbstractWidget> widgets = new ArrayList<>();
-        
+
+        // Appearance Section — cosmetic only, no effect on any protection feature.
+        widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_APPEARANCE)));
+
+        widgets.add(cycleBuilder(AccentColorDisplay::getDisplayName, List.of(SpoofSettings.AccentColor.values()), settings.getAccentColor())
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_ACCENT_COLOR),
+                (button, value) -> { settings.setAccentColor(value); config.save(); }));
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isCompactLayout())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_COMPACT_LAYOUT)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_COMPACT_LAYOUT),
+                (button, value) -> { settings.setCompactLayout(value); config.save(); refreshScreen(); }));
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isShowHudIndicator())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_SHOW_HUD)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_SHOW_HUD),
+                (button, value) -> { settings.setShowHudIndicator(value); config.save(); }));
+
+        // Server Profile Section — only meaningful while the config screen was
+        // opened with an active connection (e.g. via Mod Menu's in-game/pause
+        // integration); the multiplayer-list "OpSec" button opens this before any
+        // server is chosen, so there's nothing to key a profile on yet.
+        if (config.getCurrentServer() != null) {
+            widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_SERVER_PROFILE, config.getCurrentServer())));
+
+            widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), config.hasServerProfile())
+                    .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_SERVER_PROFILE)))
+                    .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_SERVER_PROFILE),
+                    (button, value) -> {
+                        if (value) {
+                            config.saveCurrentAsServerProfile();
+                        } else {
+                            config.removeServerProfile();
+                        }
+                        refreshScreen();
+                    }));
+        }
+
         // Alerts & Logging Section
         widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_ALERTS)));
         
@@ -419,7 +478,44 @@ public class OpsecConfigScreen extends Screen {
         // Current account info
         String currentUser = Minecraft.getInstance().getUser().getName();
         widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.ACCOUNT_CURRENT, currentUser)));
-        
+
+        // Appearance Randomization — only meaningful for the currently logged-in
+        // Microsoft account (needs a real access token; offline accounts have none).
+        widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_APPEARANCE_RANDOMIZER)));
+        java.util.Optional<SessionAccount> activeSession = accountManager.getAccounts().stream()
+                .filter(a -> a instanceof SessionAccount && a.getUsername().equals(currentUser))
+                .map(a -> (SessionAccount) a)
+                .findFirst();
+
+        if (activeSession.isPresent()) {
+            SessionAccount active = activeSession.get();
+
+            Button randomizeSkinButton = Button.builder(OpsecLang.component(OpsecStrings.BUTTON_RANDOMIZE_SKIN), button -> {
+                button.active = false;
+                CompletableFuture.supplyAsync(active::randomizeSkin).whenComplete((success, error) ->
+                        Minecraft.getInstance().execute(this::refreshScreen));
+            }).bounds(0, 0, 230, 20)
+              .tooltip(Tooltip.create(OpsecLang.component(OpsecStrings.BUTTON_RANDOMIZE_SKIN_TOOLTIP)))
+              .build();
+            widgets.add(randomizeSkinButton);
+
+            Button randomizeCapeButton = Button.builder(OpsecLang.component(OpsecStrings.BUTTON_RANDOMIZE_CAPE), button -> {
+                button.active = false;
+                CompletableFuture.supplyAsync(active::randomizeCape).whenComplete((success, error) ->
+                        Minecraft.getInstance().execute(this::refreshScreen));
+            }).bounds(0, 0, 230, 20)
+              .tooltip(Tooltip.create(OpsecLang.component(OpsecStrings.BUTTON_RANDOMIZE_CAPE_TOOLTIP)))
+              .build();
+            randomizeCapeButton.active = !active.getOwnedCapes().isEmpty();
+            widgets.add(randomizeCapeButton);
+
+            if (active.getLastError() != null && !active.getLastError().isEmpty()) {
+                widgets.add(createSectionHeader("§c" + active.getLastError()));
+            }
+        } else {
+            widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.APPEARANCE_RANDOMIZER_UNAVAILABLE)));
+        }
+
         // List saved accounts
         if (!accountManager.getAccounts().isEmpty()) {
             widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_SAVED_ACCOUNTS)));
@@ -1474,10 +1570,10 @@ public class OpsecConfigScreen extends Screen {
     private static class ScrollableWidgetList extends ContainerObjectSelectionList<ScrollableWidgetList.WidgetEntry> {
         public ScrollableWidgetList(Minecraft minecraft, int width, int height, int top, List<AbstractWidget> widgets) {
             //? if >=1.20.3 {
-            super(minecraft, width, height, top, 25);
+            super(minecraft, width, height, top, rowHeight());
             //?} else {
             /*// 1.20.1 / 1.20.2: 6-arg constructor including y1 (top + height).
-            super(minecraft, width, height, top, top + height, 25);
+            super(minecraft, width, height, top, top + height, rowHeight());
             *///?}
             this.centerListVertically = false;
             //? if <1.20.2 {
@@ -1504,6 +1600,10 @@ public class OpsecConfigScreen extends Screen {
             this.trackedScroll = scrollAmount;
         }*/
         //?}
+
+        private static int rowHeight() {
+            return OpsecConfig.getInstance().getSettings().isCompactLayout() ? 21 : 25;
+        }
 
         public double currentScrollAmount() {
             //? if >=1.21.6
@@ -1646,6 +1746,30 @@ public class OpsecConfigScreen extends Screen {
             return switch (mode) {
                 case SIGN -> OpsecLang.component(OpsecStrings.CHATSIGNING_SIGN_TOOLTIP);
                 case OFF  -> OpsecLang.component(OpsecStrings.CHATSIGNING_OFF_TOOLTIP);
+            };
+        }
+    }
+
+    private static class AccentColorDisplay {
+        public static Component getDisplayName(SpoofSettings.AccentColor color) {
+            return Component.literal(color.code() + color.name());
+        }
+    }
+
+    private static class BrandOverrideDisplay {
+        public static Component getDisplayName(SpoofSettings.BrandOverride mode) {
+            return switch (mode) {
+                case DEFAULT      -> OpsecLang.component(OpsecStrings.BRAND_OVERRIDE_VANILLA);
+                case LUNAR_CLIENT -> OpsecLang.component(OpsecStrings.BRAND_OVERRIDE_LUNAR);
+                case BADLION      -> OpsecLang.component(OpsecStrings.BRAND_OVERRIDE_BADLION);
+            };
+        }
+
+        public static Component getTooltip(SpoofSettings.BrandOverride mode) {
+            return switch (mode) {
+                case DEFAULT      -> OpsecLang.component(OpsecStrings.BRAND_OVERRIDE_VANILLA_TOOLTIP);
+                case LUNAR_CLIENT -> OpsecLang.component(OpsecStrings.BRAND_OVERRIDE_LUNAR_TOOLTIP);
+                case BADLION      -> OpsecLang.component(OpsecStrings.BRAND_OVERRIDE_BADLION_TOOLTIP);
             };
         }
     }

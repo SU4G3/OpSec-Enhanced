@@ -7,9 +7,9 @@
 <p align="center">A client-side Minecraft mod that provides protection against client fingerprinting, tracking exploits, and other privacy focused features.</p>
 
 <p align="center">
-<a href="https://modrinth.com/mod/opsec-enhanced"><img alt="Modrinth Downloads" src="https://img.shields.io/modrinth/dt/opsec-enhanced?logo=modrinth&logoColor=white&label=Modrinth&color=00AF5C"></a>
+<a href="https://modrinth.com/mod/opsec-enhanced"><img alt="Modrinth" src="https://img.shields.io/badge/Modrinth-Under%20Review-00AF5C?logo=modrinth&logoColor=white"></a>
 <a href="https://modrinth.com/mod/opsec-enhanced/versions"><img alt="Supported Minecraft Versions" src="https://img.shields.io/badge/Available%20for-1.20%20%E2%80%93%2026.2-00AF5C"></a>
-<a href="https://www.curseforge.com/minecraft/mc-mods/opsec-enhanced"><img alt="CurseForge Downloads" src="https://cf.way2muchnoise.eu/full_opsec-enhanced_downloads.svg?badge_style=flat"></a>
+<a href="https://www.curseforge.com/minecraft/mc-mods/opsec-enhanced"><img alt="CurseForge" src="https://img.shields.io/badge/CurseForge-Coming%20Soon-F16436"></a>
 <a href="https://www.curseforge.com/minecraft/mc-mods/opsec-enhanced"><img alt="Supported Minecraft Versions" src="https://img.shields.io/badge/Available%20for-1.20%20%E2%80%93%2026.2-F16436"></a>
 <a href="https://github.com/SU4G3/OpSec-Enhanced/releases"><img alt="GitHub Downloads" src="https://img.shields.io/github/downloads/SU4G3/OpSec-Enhanced/total?logo=github&logoColor=white&label=GitHub&color=6e5494"></a>
 <a href="https://github.com/SU4G3/OpSec-Enhanced/releases/latest"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/SU4G3/OpSec-Enhanced?logo=github&logoColor=white&label=Release&color=6e5494"></a>

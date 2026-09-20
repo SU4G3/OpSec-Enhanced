@@ -46,6 +46,13 @@
 - **Sensitive Log Redaction** - Strips token-shaped strings from logged authentication error responses before they hit the log file
 - **[Spoof As Options](#spoof-as-options)** - While spoofing as vanilla, optionally advertise as Lunar Client or Badlion Client instead
 - **[DPI Evasion (TLS Fragmentation)](#dpi-evasion-tls-fragmentation)** - Splits the mod's own update/integrity-check HTTPS handshake to dodge naive SNI-based connection blocking
+- **[Block Cookies](#block-cookies)** - Refuses to store server-set cookies (MC 1.20.5+), which otherwise persist across reconnects and Transfer hops
+- **[Client Information Normalizer](#client-information-normalizer)** - Reports a fixed, common language/view-distance/chat-mode/skin-layers/main-hand combo instead of your real settings
+- **[Scrub Pack Download Headers](#scrub-pack-download-headers)** - Neutralizes the per-player HTTP headers vanilla sends when downloading a server resource pack
+- **[Command History Guard](#command-history-guard)** - Redacts `/login`, `/register`, `/changepassword` etc. arguments before they're written to `command_history.txt`
+- **[Auto-Purge Pack Cache On Exit](#auto-purge-pack-cache-on-exit)** - Wipes the downloaded-pack cache on game close, on top of per-account isolation
+- **[Lazy Server List Ping](#lazy-server-list-ping)** - Stops the multiplayer screen from auto-pinging every saved server on open
+- **Jar Integrity Mirrors** - Integrity check falls back through GitHub Releases and CurseForge if Modrinth doesn't have a match, instead of silently skipping
 
 > If you're interested in servers or plugins that are using tracking related exploits then look in the [Hall of Shame](https://github.com/NikOverflow/ExploitPreventer/blob/master/HALL_OF_SHAME.md).
 
@@ -89,6 +96,12 @@ If settings are changed while connected to a server it is recommended to reconne
 | **Meteor Fix** | Disable Meteor Client's broken key resolution protection (only shown when Meteor is installed) |
 | **Signing Mode** | Configure [chat signing](#chat-signing-control) behavior:<br/>• **OFF**: Strip signatures (maximum privacy)<br/>• **ON**: Default Minecraft behavior<br/>• **AUTO**: Only sign when required (recommended) |
 | **Disable Telemetry** | Enable/disable [telemetry blocking](#telemetry-blocking) |
+| **Command History Guard** | Enable/disable [command history redaction](#command-history-guard) (default: on) |
+| **Block Cookies** | Enable/disable [cookie blocking](#block-cookies) (MC 1.20.5+, default: on) |
+| **Client Information Normalizer** | Enable/disable [reporting a fixed common client info combo](#client-information-normalizer) (default: off) |
+| **Scrub Pack Download Headers** | Enable/disable [neutralizing per-player pack-download headers](#scrub-pack-download-headers) (MC 1.20.3+, default: on) |
+| **Auto-Purge Pack Cache On Exit** | Enable/disable [wiping the pack cache on game close](#auto-purge-pack-cache-on-exit) (default: off) |
+| **Lazy Server List Ping** | Enable/disable [skipping the automatic multiplayer-list ping](#lazy-server-list-ping) (default: off) |
 
 #### Whitelist Tab
 
@@ -187,6 +200,66 @@ Off by default — enable it in Protection → Fragment TLS Handshake if you're 
 - **Microsoft/Xbox/Minecraft-services login** (`SessionAccount`) — that path uses `java.net.http.HttpClient`, whose async engine talks to raw sockets via `SSLEngine` directly and never goes through a `SSLSocketFactory`, so there's no public API hook to fragment its handshake. If login itself is blocked in your region, run a system-level tool (zapret/GoodbyeDPI/ByeDPI) alongside the game.
 - **The actual Minecraft server connection** — that's a raw TCP socket carrying the Minecraft protocol, not TLS. There's no ClientHello to fragment. A blocked server IP/port needs a system-level bypass tool, not a client mod.
 - **IP-based blocking in general** — fragmentation only defeats DPI that inspects the SNI field. If the destination IP is null-routed or reset regardless of what's inside the packet, this does nothing.
+
+---
+
+### Block Cookies
+
+MC 1.20.5+ lets a server send `ClientboundStoreCookiePacket` to persist an opaque blob on the client, which the server (or a colluding one) can request back later via `ClientboundCookieRequestPacket` — including across reconnects and `Transfer` hops. That's a ready-made cross-session, cross-server tracker that doesn't depend on your account or IP at all.
+
+OpSec cancels `handleStoreCookie` outright when this is on, so no cookie is ever stored. A subsequent request for it gets vanilla's normal "never set" response (empty payload) — indistinguishable from a client that was never sent one.
+
+On by default (MC 1.20.5+ only; the packet doesn't exist on older versions).
+
+---
+
+### Client Information Normalizer
+
+Every client sends a `ClientInformation` packet on join (language, view distance, chat visibility, chat colors, skin-layer bitmask, main hand, text filtering, server-listing opt-in). That combination of settings is itself a fingerprint — an unusual view distance plus an unusual language plus an unusual skin-layer mask narrows down who you are just as effectively as a mod list would.
+
+When enabled, OpSec replaces the entire outgoing `ClientInformation` with a fixed, common baseline (`en_us`, view distance 10, chat FULL, all skin layers on, main hand right, text filtering off, listing on) instead of whatever you actually have configured. These are vanilla's real fresh-install defaults, not `ClientInformation.createDefault()`'s internal fallback (which reports an unrealistic view distance of 2 and all skin layers off — reporting that would stand out *more* than reporting nothing, same as bad brand spoofing would).
+
+Off by default, since it does mean the server's view of your settings won't match reality (chat visibility mainly — no gameplay-breaking effect either way).
+
+---
+
+### Scrub Pack Download Headers
+
+Decompiling vanilla's `DownloadedPackSource` shows it attaches `X-Minecraft-Username`, `X-Minecraft-UUID`, `X-Minecraft-Version`, `X-Minecraft-Version-ID`, `X-Minecraft-Pack-Format`, and a version-specific `User-Agent` to every server resource pack download request. The pack host sees all of this — including a third-party CDN that isn't the game server itself.
+
+OpSec replaces each of these with a neutral placeholder value before the request goes out. Replacement is by header name, so it's a no-op for any header a given Minecraft version doesn't send.
+
+On by default (MC 1.20.3+, when the multi-pack download system was introduced).
+
+---
+
+### Command History Guard
+
+Minecraft's `CommandHistory` persists what you type in chat/commands to `command_history.txt` for arrow-key recall — including `/login <password>`, `/register <password>`, and similar auth-plugin commands, stored in plaintext exactly as typed.
+
+OpSec redacts the arguments of `/login`, `/l`, `/register`, `/reg`, `/changepassword`, `/changepw`, `/cpw`, `/premium`, `/2fa`, and `/authme` before they reach the history list or the file — the command name is kept (so history stays useful) and only the password/argument text is replaced.
+
+On by default (MC 1.20.2+, when `CommandHistory` was introduced — older versions never persisted command history to disk in the first place).
+
+---
+
+### Auto-Purge Pack Cache On Exit
+
+[Isolate Pack Cache](#isolate-pack-cache) buckets downloaded packs per account (and per server), but an isolated cache is still an artifact sitting on disk between sessions.
+
+When enabled, OpSec wipes `downloads/` and `server-resource-packs/` on client shutdown, reusing the same cache-clearing logic as the manual **Clear Cache** button.
+
+Off by default — packs simply re-download next time you connect.
+
+---
+
+### Lazy Server List Ping
+
+Opening the multiplayer screen makes Minecraft automatically ping every saved server to fetch its MOTD/player count/icon — each ping is a real connection attempt (and IP disclosure) to a server you haven't chosen to join yet, just from opening the menu.
+
+OpSec cancels `ServerStatusPinger.pingServer` when this is on, so no automatic pings happen; a saved server shows no preview until you actually connect to it (joining doesn't need the ping data, so this has no effect on connecting).
+
+Off by default.
 
 ---
 

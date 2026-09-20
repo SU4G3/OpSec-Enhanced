@@ -177,8 +177,14 @@ public class SpoofSettings {
     private boolean logScrubberEnabled = true;
     // Skip the automatic ping of every saved server when the multiplayer screen opens.
     private boolean lazyServerPing = false;
-    // Mask account names and the current server address on OpSec's own screens.
-    private boolean streamerMode = false;
+    // Replace X-Minecraft-Username/UUID/Version/Version-ID/Pack-Format and User-Agent
+    // with neutral values on server-pack downloads — the pack host sees these even
+    // when it's a third-party CDN, not just the game server.
+    private boolean scrubPackHeaders = true;
+    // Redact the arguments of /login, /register etc. before CommandHistory persists them.
+    private boolean commandHistoryGuard = true;
+    // Wipe downloads/ and server-resource-packs/ on client shutdown.
+    private boolean autoPurgePackCache = false;
 
     // UI Settings
     private int buttonX = -1;
@@ -310,9 +316,15 @@ public class SpoofSettings {
     public boolean isLazyServerPing() { return lazyServerPing; }
     public void setLazyServerPing(boolean lazyServerPing) { this.lazyServerPing = lazyServerPing; }
 
-    public boolean isStreamerMode() { return streamerMode; }
-    public void setStreamerMode(boolean streamerMode) { this.streamerMode = streamerMode; }
-    
+    public boolean isScrubPackHeaders() { return scrubPackHeaders; }
+    public void setScrubPackHeaders(boolean scrubPackHeaders) { this.scrubPackHeaders = scrubPackHeaders; }
+
+    public boolean isCommandHistoryGuard() { return commandHistoryGuard; }
+    public void setCommandHistoryGuard(boolean commandHistoryGuard) { this.commandHistoryGuard = commandHistoryGuard; }
+
+    public boolean isAutoPurgePackCache() { return autoPurgePackCache; }
+    public void setAutoPurgePackCache(boolean autoPurgePackCache) { this.autoPurgePackCache = autoPurgePackCache; }
+
     public int[] getButtonPosition() {
         if (buttonX < 0 || buttonY < 0) return null;
         return new int[] { buttonX, buttonY };
@@ -395,7 +407,9 @@ public class SpoofSettings {
         json.addProperty("normalizeClientInfo", normalizeClientInfo);
         json.addProperty("logScrubberEnabled", logScrubberEnabled);
         json.addProperty("lazyServerPing", lazyServerPing);
-        json.addProperty("streamerMode", streamerMode);
+        json.addProperty("scrubPackHeaders", scrubPackHeaders);
+        json.addProperty("commandHistoryGuard", commandHistoryGuard);
+        json.addProperty("autoPurgePackCache", autoPurgePackCache);
         json.addProperty("buttonX", buttonX);
         json.addProperty("buttonY", buttonY);
         json.addProperty("skippedUpdateVersion", skippedUpdateVersion);
@@ -500,7 +514,9 @@ public class SpoofSettings {
         if (json.has("normalizeClientInfo")) s.normalizeClientInfo = json.get("normalizeClientInfo").getAsBoolean();
         if (json.has("logScrubberEnabled")) s.logScrubberEnabled = json.get("logScrubberEnabled").getAsBoolean();
         if (json.has("lazyServerPing")) s.lazyServerPing = json.get("lazyServerPing").getAsBoolean();
-        if (json.has("streamerMode")) s.streamerMode = json.get("streamerMode").getAsBoolean();
+        if (json.has("scrubPackHeaders")) s.scrubPackHeaders = json.get("scrubPackHeaders").getAsBoolean();
+        if (json.has("commandHistoryGuard")) s.commandHistoryGuard = json.get("commandHistoryGuard").getAsBoolean();
+        if (json.has("autoPurgePackCache")) s.autoPurgePackCache = json.get("autoPurgePackCache").getAsBoolean();
         if (json.has("buttonX")) s.buttonX = json.get("buttonX").getAsInt();
         if (json.has("buttonY")) s.buttonY = json.get("buttonY").getAsInt();
         if (json.has("skippedUpdateVersion")) s.skippedUpdateVersion = json.get("skippedUpdateVersion").getAsString();
@@ -569,7 +585,9 @@ public class SpoofSettings {
         this.normalizeClientInfo = other.normalizeClientInfo;
         this.logScrubberEnabled = other.logScrubberEnabled;
         this.lazyServerPing = other.lazyServerPing;
-        this.streamerMode = other.streamerMode;
+        this.scrubPackHeaders = other.scrubPackHeaders;
+        this.commandHistoryGuard = other.commandHistoryGuard;
+        this.autoPurgePackCache = other.autoPurgePackCache;
         this.buttonX = other.buttonX;
         this.buttonY = other.buttonY;
         this.skippedUpdateVersion = other.skippedUpdateVersion;

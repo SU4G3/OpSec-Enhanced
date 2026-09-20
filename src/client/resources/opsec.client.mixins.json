@@ -41,7 +41,7 @@
 		"ServerboundClientInformationPacketMixin",
 		"CrashReportMixin",
 		"ServerStatusPingerMixin",
-		"DebugScreenOverlayMixin"${gui_hud_mixin_entry}
+		"CommandHistoryMixin"${gui_hud_mixin_entry}
 	],
 	"injectors": {
 		"defaultRequire": 1

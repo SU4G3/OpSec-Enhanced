@@ -325,6 +325,18 @@ public class OpsecConfigScreen extends Screen {
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_STRIP_MOD_SHADERS),
                 (button, value) -> { settings.setStripModShaders(value); config.save(); }));
 
+        //? if >=1.20.3 {
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isScrubPackHeaders())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_SCRUB_PACK_HEADERS)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_SCRUB_PACK_HEADERS),
+                (button, value) -> { settings.setScrubPackHeaders(value); config.save(); }));
+        //?}
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isAutoPurgePackCache())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_AUTO_PURGE_PACK_CACHE)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_AUTO_PURGE_PACK_CACHE),
+                (button, value) -> { settings.setAutoPurgePackCache(value); config.save(); }));
+
         widgets.add(Button.builder(OpsecLang.component(OpsecStrings.OPTION_CLEAR_CACHE), button -> {
                 ResourcePackGuard.clearAllCaches();
             }).size(230, 20)
@@ -419,6 +431,13 @@ public class OpsecConfigScreen extends Screen {
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_GUARD_CHAT_LINKS),
                 (button, value) -> { settings.setGuardChatLinks(value); config.save(); }));
 
+        //? if >=1.20.2 {
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isCommandHistoryGuard())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_COMMAND_HISTORY_GUARD)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_COMMAND_HISTORY_GUARD),
+                (button, value) -> { settings.setCommandHistoryGuard(value); config.save(); }));
+        //?}
+
         widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isDpiFragmentTlsHello())
                 .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_DPI_FRAGMENT_TLS)))
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_DPI_FRAGMENT_TLS),
@@ -459,11 +478,6 @@ public class OpsecConfigScreen extends Screen {
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_COMPACT_LAYOUT),
                 (button, value) -> { settings.setCompactLayout(value); config.save(); refreshScreen(); }));
 
-        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isStreamerMode())
-                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_STREAMER_MODE)))
-                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_STREAMER_MODE),
-                (button, value) -> { settings.setStreamerMode(value); config.save(); refreshScreen(); }));
-
         // Not offered on 26.1+ — see OpsecHud's javadoc: the toggle would do nothing there.
         if (OpsecConfig.MC_VERSION_HAS_HUD_INDICATOR) {
             widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isShowHudIndicator())
@@ -477,8 +491,7 @@ public class OpsecConfigScreen extends Screen {
         // integration); the multiplayer-list "OpSec" button opens this before any
         // server is chosen, so there's nothing to key a profile on yet.
         if (config.getCurrentServer() != null) {
-            String serverLabel = settings.isStreamerMode() ? "••••••" : config.getCurrentServer();
-            widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_SERVER_PROFILE, serverLabel)));
+            widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_SERVER_PROFILE, config.getCurrentServer())));
 
             widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), config.hasServerProfile())
                     .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_SERVER_PROFILE)))
@@ -550,8 +563,7 @@ public class OpsecConfigScreen extends Screen {
         
         // Current account info
         String currentUser = Minecraft.getInstance().getUser().getName();
-        boolean streamerMode = config.getSettings().isStreamerMode();
-        widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.ACCOUNT_CURRENT, opsec$maskIfStreaming(currentUser, streamerMode))));
+        widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.ACCOUNT_CURRENT, currentUser)));
 
         // Appearance Randomization — only meaningful for the currently logged-in
         // Microsoft account (needs a real access token; offline accounts have none).
@@ -595,7 +607,7 @@ public class OpsecConfigScreen extends Screen {
             widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_SAVED_ACCOUNTS)));
             
             for (Account account : accountManager.getAccounts()) {
-                String displayName = opsec$maskIfStreaming(account.getUsername(), streamerMode) + (account.isCracked() ? " \u00A77(offline)" : "");
+                String displayName = account.getUsername() + (account.isCracked() ? " \u00A77(offline)" : "");
                 // Check if this account is actually the current logged-in user (not just stored as active)
                 boolean isLoggedIn = currentUser.equals(account.getUsername());
                 boolean isValid = account.isValid();
@@ -1360,11 +1372,6 @@ public class OpsecConfigScreen extends Screen {
             .toList();
     }
 
-    /** Streamer Mode: keep the first character so multiple accounts stay distinguishable on screen. */
-    private static String opsec$maskIfStreaming(String name, boolean streaming) {
-        if (!streaming || name == null || name.isEmpty()) return name;
-        return name.charAt(0) + "*".repeat(Math.max(1, name.length() - 1));
-    }
 
     private CycleButton<Boolean> createEPManagedToggle(Component label) {
         return createManagedToggle(label, OpsecLang.component(OpsecStrings.EP_MANAGED_TOOLTIP));

@@ -58,8 +58,6 @@ public final class OpsecStrings {
     public static final String TOOLTIP_COMPACT_LAYOUT = "opsec.option.compactLayout.tooltip";
     public static final String OPTION_SHOW_HUD = "opsec.option.showHud";
     public static final String TOOLTIP_SHOW_HUD = "opsec.option.showHud.tooltip";
-    public static final String OPTION_STREAMER_MODE = "opsec.option.streamerMode";
-    public static final String TOOLTIP_STREAMER_MODE = "opsec.option.streamerMode.tooltip";
 
     public static final String SECTION_SERVER_PROFILE = "opsec.section.serverProfile";
     public static final String OPTION_SERVER_PROFILE = "opsec.option.serverProfile";
@@ -87,6 +85,10 @@ public final class OpsecStrings {
     public static final String OPTION_BLOCK_LOCAL_PACK_URLS = "opsec.option.blockLocalPackUrls";
     public static final String OPTION_STRIP_MOD_SHADERS = "opsec.option.stripModShaders";
     public static final String OPTION_CLEAR_CACHE = "opsec.option.clearCache";
+    public static final String OPTION_SCRUB_PACK_HEADERS = "opsec.option.scrubPackHeaders";
+    public static final String TOOLTIP_SCRUB_PACK_HEADERS = "opsec.option.scrubPackHeaders.tooltip";
+    public static final String OPTION_AUTO_PURGE_PACK_CACHE = "opsec.option.autoPurgePackCache";
+    public static final String TOOLTIP_AUTO_PURGE_PACK_CACHE = "opsec.option.autoPurgePackCache.tooltip";
     public static final String OPTION_KEY_RESOLUTION_SPOOFING = "opsec.option.keyResolutionSpoofing";
     public static final String OPTION_FAKE_DEFAULT_KEYBINDS = "opsec.option.fakeDefaultKeybinds";
     public static final String OPTION_METEOR_FIX = "opsec.option.meteorFix";
@@ -115,6 +117,8 @@ public final class OpsecStrings {
     public static final String TOOLTIP_NORMALIZE_CLIENT_INFO = "opsec.option.normalizeClientInfo.tooltip";
     public static final String OPTION_LAZY_SERVER_PING = "opsec.option.lazyServerPing";
     public static final String TOOLTIP_LAZY_SERVER_PING = "opsec.option.lazyServerPing.tooltip";
+    public static final String OPTION_COMMAND_HISTORY_GUARD = "opsec.option.commandHistoryGuard";
+    public static final String TOOLTIP_COMMAND_HISTORY_GUARD = "opsec.option.commandHistoryGuard.tooltip";
 
     public static final String CHATGUARD_TITLE = "opsec.chatguard.title";
     public static final String CHATGUARD_MESSAGE_COMMAND = "opsec.chatguard.message.command";

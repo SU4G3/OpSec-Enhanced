@@ -12,6 +12,7 @@ import aurick.opsec.mod.util.LocalAddressUtil;
 import net.minecraft.util.HttpUtil;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +24,7 @@ import java.net.ProtocolException;
 import java.net.Proxy;
 import java.net.Socket;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -161,6 +163,29 @@ public class HttpUtilMixin {
         httpURLConnection.set(instance);
         return original.call(instance);
     }
+
+    //? if >=1.20.3 {
+    /**
+     * Neutralizes the per-player headers vanilla attaches to a server-pack download
+     * (X-Minecraft-Username/UUID/Version/Version-ID/Pack-Format, User-Agent) — the pack
+     * host sees these even when it's a third-party CDN, not just the game server itself.
+     * Replacing by name is a no-op for any header a given version doesn't send, so this
+     * needs no per-version header list.
+     */
+    @ModifyVariable(method = "downloadFile", at = @At("HEAD"), argsOnly = true)
+    private static Map<String, String> opsec$scrubPackHeaders(Map<String, String> requestProperties) {
+        if (!OpsecConfig.getInstance().getSettings().isScrubPackHeaders()) return requestProperties;
+
+        Map<String, String> scrubbed = new HashMap<>(requestProperties);
+        if (scrubbed.containsKey("X-Minecraft-Username")) scrubbed.put("X-Minecraft-Username", "Player");
+        if (scrubbed.containsKey("X-Minecraft-UUID")) scrubbed.put("X-Minecraft-UUID", "00000000-0000-0000-0000-000000000000");
+        if (scrubbed.containsKey("X-Minecraft-Version")) scrubbed.put("X-Minecraft-Version", "unknown");
+        if (scrubbed.containsKey("X-Minecraft-Version-ID")) scrubbed.put("X-Minecraft-Version-ID", "unknown");
+        if (scrubbed.containsKey("X-Minecraft-Pack-Format")) scrubbed.put("X-Minecraft-Pack-Format", "0");
+        if (scrubbed.containsKey("User-Agent")) scrubbed.put("User-Agent", "Minecraft");
+        return scrubbed;
+    }
+    //?}
 }
 //?} else {
 /*

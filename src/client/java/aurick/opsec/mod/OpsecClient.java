@@ -77,6 +77,12 @@ public class OpsecClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(PackStripOverlay::tryShowNext);
 		ClientTickEvents.END_CLIENT_TICK.register(client -> ShaderStripTracker.flushPending());
 
+		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+			if (OpsecConfig.getInstance().getSettings().isAutoPurgePackCache()) {
+				aurick.opsec.mod.protection.ResourcePackGuard.clearAllCaches();
+			}
+		});
+
 		Opsec.LOGGER.info("OpSec client protection initialized");
 	}
 	

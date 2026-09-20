@@ -23,25 +23,50 @@ import java.time.Instant;
  */
 @Mixin(ServerboundChatPacket.class)
 public class ServerboundChatPacketMixin {
-    
+
+    //? if >=26.3 {
+    /*@Final
+    @Mutable
+    @Shadow
+    private java.util.Optional<MessageSignature> signature;
+
+    // Strip signature from packet on construction when signing is OFF.
+    @Inject(method = "<init>(Ljava/lang/String;Ljava/time/Instant;JLjava/util/Optional;Lnet/minecraft/network/chat/LastSeenMessages$Update;)V", at = @At("TAIL"))
+    private void opsec$stripSignatureOnInit(String message, Instant timeStamp, long salt,
+            java.util.Optional<MessageSignature> signature, LastSeenMessages.Update lastSeenMessages, CallbackInfo ci) {
+        if (OpsecConfig.getInstance().shouldNotSign()) {
+            Opsec.LOGGER.debug("[OpSec] signing OFF —stripping chat signature");
+            this.signature = java.util.Optional.empty();
+        }
+    }
+
+    // Return empty from the signature accessor when signing is OFF.
+    @Inject(method = "signature", at = @At("HEAD"), cancellable = true)
+    private void opsec$stripSignatureOnGet(CallbackInfoReturnable<java.util.Optional<MessageSignature>> info) {
+        if (OpsecConfig.getInstance().shouldNotSign()) {
+            Opsec.LOGGER.debug("[OpSec] signing OFF —returning empty signature");
+            info.setReturnValue(java.util.Optional.empty());
+        }
+    }
+    *///?} else {
     @Final
     @Nullable
     @Mutable
     @Shadow
     private MessageSignature signature;
-    
+
     /**
      * Strip signature from packet on construction when signing is OFF.
      */
     @Inject(method = "<init>(Ljava/lang/String;Ljava/time/Instant;JLnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/network/chat/LastSeenMessages$Update;)V", at = @At("TAIL"))
-    private void opsec$stripSignatureOnInit(String message, Instant timeStamp, long salt, 
+    private void opsec$stripSignatureOnInit(String message, Instant timeStamp, long salt,
             MessageSignature signature, LastSeenMessages.Update lastSeenMessages, CallbackInfo ci) {
         if (OpsecConfig.getInstance().shouldNotSign()) {
             Opsec.LOGGER.debug("[OpSec] signing OFF —stripping chat signature");
             this.signature = null;
         }
     }
-    
+
     /**
      * Return null from the signature accessor when signing is OFF.
      */
@@ -52,5 +77,6 @@ public class ServerboundChatPacketMixin {
             info.setReturnValue(null);
         }
     }
+    //?}
 }
 

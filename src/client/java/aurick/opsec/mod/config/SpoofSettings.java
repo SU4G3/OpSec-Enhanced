@@ -167,7 +167,19 @@ public class SpoofSettings {
     // open-URL, which already confirms), so a crafted message can silently overwrite the
     // clipboard (e.g. a scam address) or fire a command click.
     private boolean guardChatLinks = true;
-    
+    // Block ClientboundStoreCookiePacket outright (1.20.5+) — cookies persist across
+    // reconnects/Transfer hops, a ready-made cross-session/cross-server tracker.
+    private boolean blockCookies = true;
+    // Replace the outgoing ClientInformation (language/view-distance/chat-mode/skin-layers/
+    // main-hand) with a fixed common baseline instead of the player's real settings.
+    private boolean normalizeClientInfo = false;
+    // Redact OS username, IP addresses, and the player's name from crash reports.
+    private boolean logScrubberEnabled = true;
+    // Skip the automatic ping of every saved server when the multiplayer screen opens.
+    private boolean lazyServerPing = false;
+    // Mask account names and the current server address on OpSec's own screens.
+    private boolean streamerMode = false;
+
     // UI Settings
     private int buttonX = -1;
     private int buttonY = -1;
@@ -285,6 +297,21 @@ public class SpoofSettings {
 
     public boolean isGuardChatLinks() { return guardChatLinks; }
     public void setGuardChatLinks(boolean guardChatLinks) { this.guardChatLinks = guardChatLinks; }
+
+    public boolean isBlockCookies() { return blockCookies; }
+    public void setBlockCookies(boolean blockCookies) { this.blockCookies = blockCookies; }
+
+    public boolean isNormalizeClientInfo() { return normalizeClientInfo; }
+    public void setNormalizeClientInfo(boolean normalizeClientInfo) { this.normalizeClientInfo = normalizeClientInfo; }
+
+    public boolean isLogScrubberEnabled() { return logScrubberEnabled; }
+    public void setLogScrubberEnabled(boolean logScrubberEnabled) { this.logScrubberEnabled = logScrubberEnabled; }
+
+    public boolean isLazyServerPing() { return lazyServerPing; }
+    public void setLazyServerPing(boolean lazyServerPing) { this.lazyServerPing = lazyServerPing; }
+
+    public boolean isStreamerMode() { return streamerMode; }
+    public void setStreamerMode(boolean streamerMode) { this.streamerMode = streamerMode; }
     
     public int[] getButtonPosition() {
         if (buttonX < 0 || buttonY < 0) return null;
@@ -364,6 +391,11 @@ public class SpoofSettings {
         json.addProperty("signingMode", signingMode.name());
         json.addProperty("disableTelemetry", disableTelemetry);
         json.addProperty("guardChatLinks", guardChatLinks);
+        json.addProperty("blockCookies", blockCookies);
+        json.addProperty("normalizeClientInfo", normalizeClientInfo);
+        json.addProperty("logScrubberEnabled", logScrubberEnabled);
+        json.addProperty("lazyServerPing", lazyServerPing);
+        json.addProperty("streamerMode", streamerMode);
         json.addProperty("buttonX", buttonX);
         json.addProperty("buttonY", buttonY);
         json.addProperty("skippedUpdateVersion", skippedUpdateVersion);
@@ -464,6 +496,11 @@ public class SpoofSettings {
         }
         if (json.has("disableTelemetry")) s.disableTelemetry = json.get("disableTelemetry").getAsBoolean();
         if (json.has("guardChatLinks")) s.guardChatLinks = json.get("guardChatLinks").getAsBoolean();
+        if (json.has("blockCookies")) s.blockCookies = json.get("blockCookies").getAsBoolean();
+        if (json.has("normalizeClientInfo")) s.normalizeClientInfo = json.get("normalizeClientInfo").getAsBoolean();
+        if (json.has("logScrubberEnabled")) s.logScrubberEnabled = json.get("logScrubberEnabled").getAsBoolean();
+        if (json.has("lazyServerPing")) s.lazyServerPing = json.get("lazyServerPing").getAsBoolean();
+        if (json.has("streamerMode")) s.streamerMode = json.get("streamerMode").getAsBoolean();
         if (json.has("buttonX")) s.buttonX = json.get("buttonX").getAsInt();
         if (json.has("buttonY")) s.buttonY = json.get("buttonY").getAsInt();
         if (json.has("skippedUpdateVersion")) s.skippedUpdateVersion = json.get("skippedUpdateVersion").getAsString();
@@ -528,6 +565,11 @@ public class SpoofSettings {
         this.signingMode = other.signingMode;
         this.disableTelemetry = other.disableTelemetry;
         this.guardChatLinks = other.guardChatLinks;
+        this.blockCookies = other.blockCookies;
+        this.normalizeClientInfo = other.normalizeClientInfo;
+        this.logScrubberEnabled = other.logScrubberEnabled;
+        this.lazyServerPing = other.lazyServerPing;
+        this.streamerMode = other.streamerMode;
         this.buttonX = other.buttonX;
         this.buttonY = other.buttonY;
         this.skippedUpdateVersion = other.skippedUpdateVersion;

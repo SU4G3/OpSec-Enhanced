@@ -37,7 +37,10 @@
 		"PacketUtilsMixin",
 		"TabNavigationBarMixin",
 		"TitleScreenMixin",
-		"ChatClickGuardMixin"${gui_hud_mixin_entry}
+		"ChatClickGuardMixin",
+		"ServerboundClientInformationPacketMixin",
+		"CrashReportMixin",
+		"ServerStatusPingerMixin"${gui_hud_mixin_entry}
 	],
 	"injectors": {
 		"defaultRequire": 1

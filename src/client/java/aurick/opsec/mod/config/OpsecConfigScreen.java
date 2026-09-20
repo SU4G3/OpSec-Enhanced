@@ -424,6 +424,23 @@ public class OpsecConfigScreen extends Screen {
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_DPI_FRAGMENT_TLS),
                 (button, value) -> { settings.setDpiFragmentTlsHello(value); config.save(); }));
 
+        //? if >=1.20.5 {
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isBlockCookies())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_BLOCK_COOKIES)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_BLOCK_COOKIES),
+                (button, value) -> { settings.setBlockCookies(value); config.save(); }));
+        //?}
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isNormalizeClientInfo())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_NORMALIZE_CLIENT_INFO)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_NORMALIZE_CLIENT_INFO),
+                (button, value) -> { settings.setNormalizeClientInfo(value); config.save(); }));
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isLazyServerPing())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_LAZY_SERVER_PING)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_LAZY_SERVER_PING),
+                (button, value) -> { settings.setLazyServerPing(value); config.save(); }));
+
         return new WidgetTab(OpsecLang.component(OpsecStrings.TAB_PROTECTION), widgets);
     }
     
@@ -442,6 +459,11 @@ public class OpsecConfigScreen extends Screen {
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_COMPACT_LAYOUT),
                 (button, value) -> { settings.setCompactLayout(value); config.save(); refreshScreen(); }));
 
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isStreamerMode())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_STREAMER_MODE)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_STREAMER_MODE),
+                (button, value) -> { settings.setStreamerMode(value); config.save(); refreshScreen(); }));
+
         // Not offered on 26.1+ — see OpsecHud's javadoc: the toggle would do nothing there.
         if (OpsecConfig.MC_VERSION_HAS_HUD_INDICATOR) {
             widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isShowHudIndicator())
@@ -455,7 +477,8 @@ public class OpsecConfigScreen extends Screen {
         // integration); the multiplayer-list "OpSec" button opens this before any
         // server is chosen, so there's nothing to key a profile on yet.
         if (config.getCurrentServer() != null) {
-            widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_SERVER_PROFILE, config.getCurrentServer())));
+            String serverLabel = settings.isStreamerMode() ? "••••••" : config.getCurrentServer();
+            widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_SERVER_PROFILE, serverLabel)));
 
             widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), config.hasServerProfile())
                     .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_SERVER_PROFILE)))
@@ -488,6 +511,20 @@ public class OpsecConfigScreen extends Screen {
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_LOG_DETECTIONS),
                 (button, value) -> { settings.setLogDetections(value); config.save(); }));
 
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isLogScrubberEnabled())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_LOG_SCRUBBER)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_LOG_SCRUBBER),
+                (button, value) -> { settings.setLogScrubberEnabled(value); config.save(); }));
+
+        widgets.add(Button.builder(OpsecLang.component(OpsecStrings.BUTTON_EXPORT_SANITIZED_LOG), button -> {
+                boolean success = aurick.opsec.mod.util.LogExportHandler.exportSanitizedLog();
+                button.setMessage(Component.literal(success
+                        ? OpsecLang.tr(OpsecStrings.TOAST_LOG_EXPORTED)
+                        : OpsecLang.tr(OpsecStrings.TOAST_LOG_EXPORT_FAILED)));
+            }).size(230, 20)
+          .tooltip(Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_EXPORT_SANITIZED_LOG)))
+          .build());
+
         // Debug Section
         widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_DEBUG)));
 
@@ -513,7 +550,8 @@ public class OpsecConfigScreen extends Screen {
         
         // Current account info
         String currentUser = Minecraft.getInstance().getUser().getName();
-        widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.ACCOUNT_CURRENT, currentUser)));
+        boolean streamerMode = config.getSettings().isStreamerMode();
+        widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.ACCOUNT_CURRENT, opsec$maskIfStreaming(currentUser, streamerMode))));
 
         // Appearance Randomization — only meaningful for the currently logged-in
         // Microsoft account (needs a real access token; offline accounts have none).
@@ -557,7 +595,7 @@ public class OpsecConfigScreen extends Screen {
             widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_SAVED_ACCOUNTS)));
             
             for (Account account : accountManager.getAccounts()) {
-                String displayName = account.getUsername() + (account.isCracked() ? " \u00A77(offline)" : "");
+                String displayName = opsec$maskIfStreaming(account.getUsername(), streamerMode) + (account.isCracked() ? " \u00A77(offline)" : "");
                 // Check if this account is actually the current logged-in user (not just stored as active)
                 boolean isLoggedIn = currentUser.equals(account.getUsername());
                 boolean isValid = account.isValid();
@@ -1320,6 +1358,12 @@ public class OpsecConfigScreen extends Screen {
                     && mod.getContainingMod().isEmpty())
             .sorted(Comparator.comparing(mod -> mod.getMetadata().getName(), String.CASE_INSENSITIVE_ORDER))
             .toList();
+    }
+
+    /** Streamer Mode: keep the first character so multiple accounts stay distinguishable on screen. */
+    private static String opsec$maskIfStreaming(String name, boolean streaming) {
+        if (!streaming || name == null || name.isEmpty()) return name;
+        return name.charAt(0) + "*".repeat(Math.max(1, name.length() - 1));
     }
 
     private CycleButton<Boolean> createEPManagedToggle(Component label) {

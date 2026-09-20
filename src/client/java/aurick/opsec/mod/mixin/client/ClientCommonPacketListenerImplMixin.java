@@ -39,6 +39,19 @@ public abstract class ClientCommonPacketListenerImplMixin {
     private void opsec$onResourcePackPop(ClientboundResourcePackPopPacket packet, CallbackInfo ci) {
         PackStripHandler.onPop(packet.id());
     }
+
+    //? if >=1.20.5 {
+    // Cookies (added 1.20.5) let a server persist an opaque blob on the client across
+    // reconnects and Transfer hops — a ready-made cross-session/cross-server tracker.
+    // Blocking the store means every ClientboundCookieRequestPacket gets answered with
+    // an empty payload (vanilla behavior for a cookie it never set), same as a fresh client.
+    @Inject(method = "handleStoreCookie", at = @At("HEAD"), cancellable = true)
+    private void opsec$onStoreCookie(net.minecraft.network.protocol.common.ClientboundStoreCookiePacket packet, CallbackInfo ci) {
+        if (aurick.opsec.mod.config.OpsecConfig.getInstance().getSettings().isBlockCookies()) {
+            ci.cancel();
+        }
+    }
+    //?}
 }
 //?} elif >=1.20.2 {
 /*

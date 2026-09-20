@@ -58,6 +58,8 @@ public final class OpsecStrings {
     public static final String TOOLTIP_COMPACT_LAYOUT = "opsec.option.compactLayout.tooltip";
     public static final String OPTION_SHOW_HUD = "opsec.option.showHud";
     public static final String TOOLTIP_SHOW_HUD = "opsec.option.showHud.tooltip";
+    public static final String OPTION_STREAMER_MODE = "opsec.option.streamerMode";
+    public static final String TOOLTIP_STREAMER_MODE = "opsec.option.streamerMode.tooltip";
 
     public static final String SECTION_SERVER_PROFILE = "opsec.section.serverProfile";
     public static final String OPTION_SERVER_PROFILE = "opsec.option.serverProfile";
@@ -107,6 +109,12 @@ public final class OpsecStrings {
     public static final String OPTION_CHAT_SIGNING = "opsec.option.chatSigning";
     public static final String OPTION_DISABLE_TELEMETRY = "opsec.option.disableTelemetry";
     public static final String OPTION_GUARD_CHAT_LINKS = "opsec.option.guardChatLinks";
+    public static final String OPTION_BLOCK_COOKIES = "opsec.option.blockCookies";
+    public static final String TOOLTIP_BLOCK_COOKIES = "opsec.option.blockCookies.tooltip";
+    public static final String OPTION_NORMALIZE_CLIENT_INFO = "opsec.option.normalizeClientInfo";
+    public static final String TOOLTIP_NORMALIZE_CLIENT_INFO = "opsec.option.normalizeClientInfo.tooltip";
+    public static final String OPTION_LAZY_SERVER_PING = "opsec.option.lazyServerPing";
+    public static final String TOOLTIP_LAZY_SERVER_PING = "opsec.option.lazyServerPing.tooltip";
 
     public static final String CHATGUARD_TITLE = "opsec.chatguard.title";
     public static final String CHATGUARD_MESSAGE_COMMAND = "opsec.chatguard.message.command";
@@ -121,6 +129,12 @@ public final class OpsecStrings {
     public static final String OPTION_LOG_DETECTIONS = "opsec.option.logDetections";
     public static final String OPTION_DEBUG_ALERTS = "opsec.option.debugAlerts";
     public static final String OPTION_DEBUG_COMMAND = "opsec.option.debugCommand";
+    public static final String OPTION_LOG_SCRUBBER = "opsec.option.logScrubber";
+    public static final String TOOLTIP_LOG_SCRUBBER = "opsec.option.logScrubber.tooltip";
+    public static final String BUTTON_EXPORT_SANITIZED_LOG = "opsec.button.exportSanitizedLog";
+    public static final String TOOLTIP_EXPORT_SANITIZED_LOG = "opsec.button.exportSanitizedLog.tooltip";
+    public static final String TOAST_LOG_EXPORTED = "opsec.toast.logExported";
+    public static final String TOAST_LOG_EXPORT_FAILED = "opsec.toast.logExportFailed";
     public static final String OPTION_HIDE_INSECURE_INDICATORS = "opsec.option.hideInsecureIndicators";
     public static final String OPTION_HIDE_MODIFIED_INDICATORS = "opsec.option.hideModifiedIndicators";
     public static final String OPTION_HIDE_SYSTEM_MSG_INDICATORS = "opsec.option.hideSystemMsgIndicators";

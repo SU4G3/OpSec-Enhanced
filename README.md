@@ -8,9 +8,9 @@
 
 <p align="center">
 <a href="https://modrinth.com/mod/opsec-enhanced"><img alt="Modrinth" src="https://img.shields.io/badge/Modrinth-Under%20Review-00AF5C?logo=modrinth&logoColor=white"></a>
-<a href="https://modrinth.com/mod/opsec-enhanced/versions"><img alt="Supported Minecraft Versions" src="https://img.shields.io/badge/Available%20for-1.20%20%E2%80%93%2026.2-00AF5C"></a>
+<a href="https://modrinth.com/mod/opsec-enhanced/versions"><img alt="Supported Minecraft Versions" src="https://img.shields.io/badge/Available%20for-1.20%20%E2%80%93%2026.3-00AF5C"></a>
 <a href="https://www.curseforge.com/minecraft/mc-mods/opsec-enhanced"><img alt="CurseForge" src="https://img.shields.io/badge/CurseForge-Coming%20Soon-F16436"></a>
-<a href="https://www.curseforge.com/minecraft/mc-mods/opsec-enhanced"><img alt="Supported Minecraft Versions" src="https://img.shields.io/badge/Available%20for-1.20%20%E2%80%93%2026.2-F16436"></a>
+<a href="https://www.curseforge.com/minecraft/mc-mods/opsec-enhanced"><img alt="Supported Minecraft Versions" src="https://img.shields.io/badge/Available%20for-1.20%20%E2%80%93%2026.3-F16436"></a>
 <a href="https://github.com/SU4G3/OpSec-Enhanced/releases/latest"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/SU4G3/OpSec-Enhanced?logo=github&logoColor=white&label=Release&color=6e5494"></a>
 </p>
 
@@ -51,7 +51,7 @@
 
 ## Requirements
 
-- **Minecraft** 1.20 – 26.2 (26.3 not yet supported — see [Known Issues](#known-issues))
+- **Minecraft** 1.20 – 26.3
 - **Fabric Loader** 0.16.0+ (0.18.5+ for MC 26.1.x)
 - **Fabric API** (matching your Minecraft version)
 
@@ -143,8 +143,10 @@ The `/opsec` command is **off by default** (enable it in Misc → Debug Command)
 
 ## Known Issues
 
-- **26.3 not yet supported.** Minecraft 26.3 shipped a major authlib bump (9.x → 10.x, removing `YggdrasilAuthenticationService`/`YggdrasilUserApiService` entirely) and switched its windowing backend from GLFW to SDL (dropping the native file-dialog module the mod's import/export account feature uses). Both need a real migration, not a quick patch — tracked for a future release rather than shipped half-verified.
-- **HUD Indicator on 26.1+ is experimental.** See the [Miscellaneous Tab](#miscellaneous-tab) table above.
+- **HUD Indicator on 26.1+ is less battle-tested** than on 1.20.1-1.21.11 (which renders via a direct Mixin). See the [Miscellaneous Tab](#miscellaneous-tab) table above.
+- **On 26.3 specifically**, two features are scaled back rather than shipped as an unverified guess, since MC 26.3 changed a lot at once (authlib 9.x→10.x, GLFW→SDL windowing, and a resource-pack composition rework):
+  - **Bypass Server Pack Requirement / Strip Mod Shader Overrides don't apply.** 26.3 replaced how server packs are opened internally (`openPrimary`/`openFull` → `openMetadata`/`openResources` returning a `Stream<PackResources>`) — a real architecture change, not a signature tweak, and not something to wrap correctly on a guess without a server actually pushing a pack to test against. Every other protection feature is unaffected.
+  - **Account Import/Export uses a fixed file path instead of a native file picker** — 26.3 dropped the `lwjgl-tinyfd` module entirely (window backend moved to SDL). Import reads from, and Export writes to, `opsec-accounts-import.json` / `opsec-accounts-export.json` in your Minecraft config folder.
 
 ## Feature Details
 
@@ -436,6 +438,7 @@ OpSec blocks telemetry sending to Mojang when telemetry blocking is enabled. Doe
    ./gradlew :1.21.11:build
    ./gradlew :26.1:build
    ./gradlew :26.2:build
+   ./gradlew :26.3:build
    ```
 
 Output JARs are located in `versions/<minecraft_version>/build/libs/`:
@@ -452,6 +455,7 @@ Output JARs are located in `versions/<minecraft_version>/build/libs/`:
 | 1.21.11 | 1.21.11 |
 | 26.1 | 26.1 – 26.1.2 |
 | 26.2 | 26.2 |
+| 26.3 | 26.3 |
 
 
 ## References

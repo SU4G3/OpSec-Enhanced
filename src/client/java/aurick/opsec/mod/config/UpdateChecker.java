@@ -103,6 +103,27 @@ public final class UpdateChecker {
     }
 
     /**
+     * Opens {@link #getReleaseUrl()} in the system browser, absorbing the
+     * platform-open API split in one place instead of at each of this mod's
+     * three call sites. MC 1.26.3's GLFW->SDL switch removed
+     * {@code Util.OS.openUri(String)} entirely; {@code Blaze3D.openUri(URI)}
+     * is its replacement there.
+     */
+    public static void openReleaseUrl() {
+        try {
+            //? if >=26.3 {
+            /*com.mojang.blaze3d.Blaze3D.openUri(java.net.URI.create(getReleaseUrl()));*/
+            //?} elif >=1.21.11 {
+            /*net.minecraft.util.Util.getPlatform().openUri(getReleaseUrl());*/
+            //?} else {
+            net.minecraft.Util.getPlatform().openUri(getReleaseUrl());
+            //?}
+        } catch (Exception e) {
+            Opsec.LOGGER.warn("[OpSec] Failed to open release URL: {}", e.getMessage());
+        }
+    }
+
+    /**
      * Marks the update notification as shown for this session.
      * Prevents the screen from appearing again even if user navigates back to title screen.
      */

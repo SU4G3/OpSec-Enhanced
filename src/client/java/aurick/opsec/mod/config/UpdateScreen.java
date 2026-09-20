@@ -9,12 +9,6 @@ import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-//? if >=1.21.11 {
-/*import net.minecraft.util.Util;*/
-//?} else {
-import net.minecraft.Util;
-//?}
-
 /**
  * Native Minecraft-style screen that notifies the user when a new version of OpSec is available.
  * Provides three options: Download (opens browser), Skip This Version (skips only this version), Cancel (session dismiss).
@@ -50,7 +44,7 @@ public class UpdateScreen extends Screen {
 
         // Download button (green text)
         this.addRenderableWidget(Button.builder(Component.literal(OpsecLang.tr(OpsecStrings.UPDATE_DOWNLOAD)), button -> {
-            Util.getPlatform().openUri(UpdateChecker.getReleaseUrl());
+            UpdateChecker.openReleaseUrl();
             this.onClose();
         }).bounds(centerX - buttonWidth / 2, firstButtonY, buttonWidth, buttonHeight).build());
 

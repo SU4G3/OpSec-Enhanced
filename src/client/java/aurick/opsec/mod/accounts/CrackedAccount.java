@@ -77,11 +77,21 @@ public class CrackedAccount implements Account {
             ProfileKeyPairManager profileKeyPairManager = ProfileKeyPairManager.EMPTY_KEY_MANAGER;
             accessor.opsec$setProfileKeyPairManager(profileKeyPairManager);
 
-            // Create social manager with offline service
-            //? if >=26.2 {
-            /*com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService authService =
-                    new com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService(mc.getProxy());
-            com.mojang.authlib.yggdrasil.FriendsService friendsService = authService.createFriendsService("");
+            // Create social manager with offline service.
+            // MC 1.26.3 bumped authlib 9.x->10.x, removing the yggdrasil package
+            // entirely — MinecraftServicesDiscoveryService.create(proxy) replaces
+            // YggdrasilAuthenticationService and exposes the same
+            // createFriendsService(String) method shape, so `var` keeps the rest
+            // of this block identical across the split.
+            //? if >=26.3 {
+            /*var authService = com.mojang.authlib.services.MinecraftServicesDiscoveryService.create(mc.getProxy());
+            var friendsService = authService.createFriendsService("");
+            net.minecraft.client.gui.screens.social.RemoteFriendListUpdateHandler updateHandler =
+                    new net.minecraft.client.gui.screens.social.RemoteFriendListUpdateHandler(friendsService, mc);
+            PlayerSocialManager socialManager = new PlayerSocialManager(mc, UserApiService.OFFLINE, friendsService, updateHandler);*/
+            //?} elif >=26.2 {
+            /*var authService = new com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService(mc.getProxy());
+            var friendsService = authService.createFriendsService("");
             net.minecraft.client.gui.screens.social.RemoteFriendListUpdateHandler updateHandler =
                     new net.minecraft.client.gui.screens.social.RemoteFriendListUpdateHandler(friendsService, mc);
             PlayerSocialManager socialManager = new PlayerSocialManager(mc, UserApiService.OFFLINE, friendsService, updateHandler);*/

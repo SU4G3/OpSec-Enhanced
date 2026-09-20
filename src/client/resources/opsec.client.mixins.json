@@ -40,7 +40,8 @@
 		"ChatClickGuardMixin",
 		"ServerboundClientInformationPacketMixin",
 		"CrashReportMixin",
-		"ServerStatusPingerMixin"${gui_hud_mixin_entry}
+		"ServerStatusPingerMixin",
+		"DebugScreenOverlayMixin"${gui_hud_mixin_entry}
 	],
 	"injectors": {
 		"defaultRequire": 1

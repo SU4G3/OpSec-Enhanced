@@ -43,7 +43,7 @@
   "opsec.option.showHud.tooltip": "Shows a small always-on-screen label with the current spoof brand in the top-left corner. Purely cosmetic. On 26.1+ this uses a newer rendering path that's had less real-world testing - if it doesn't show up there, that's a known open issue, not something you're doing wrong.",
   "opsec.section.serverProfile": "§f§lServer Profile (%s)",
   "opsec.option.streamerMode": "Streamer Mode",
-  "opsec.option.streamerMode.tooltip": "Masks account names and the current server address on OpSec's own screens (first letter kept so accounts stay distinguishable), so they're safe to show on stream/recording. Doesn't touch vanilla UI. Off by default.",
+  "opsec.option.streamerMode.tooltip": "Forces the F3 debug screen off (coordinates, dimension, target block/entity - the actual on-stream leak) and masks account names and the current server address on OpSec's own screens. Off by default.",
   "opsec.option.serverProfile": "Custom Profile For This Server",
   "opsec.option.serverProfile.tooltip": "ON: save a snapshot of your current settings just for this server address, editable independently of your global defaults. OFF: delete the snapshot and go back to your global defaults. Only shown while the config screen is opened with an active connection (e.g. via Mod Menu's in-game menu) - the multiplayer-list button opens before any server is chosen.",
   "opsec.option.whitelistMode": "Whitelist Mode",

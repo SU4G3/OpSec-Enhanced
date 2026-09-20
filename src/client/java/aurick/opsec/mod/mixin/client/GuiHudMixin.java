@@ -19,12 +19,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * in this classic form (1.20.1-1.21.11).
  *
  * <p>Replaces an earlier attempt that used Fabric API's {@code HudRenderCallback}
- * event: that compiled cleanly and matched the API's bytecode contract on every
- * version, but was confirmed (by actually testing in-game) to silently not fire
- * on 1.21.11 specifically, for reasons not diagnosable without a runnable game
- * client. Injecting directly into the vanilla method Fabric's own event
- * ultimately has to bridge to removes that unexplained middle layer, and
- * matches how the rest of this mod already hooks vanilla everywhere else.</p>
+ * event, which compiled and matched the API's bytecode contract everywhere but
+ * turned out not to be the actual bug — see the color note below for what was.</p>
  *
  * <p>Stonecutter-gated {@code <26.1}: vanilla's {@code Gui} class has no plain
  * {@code render(...)} method left on 26.1+ at all (fully replaced by an
@@ -52,7 +48,14 @@ public class GuiHudMixin {
         if (!OpsecHud.shouldRender()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null || mc.options.hideGui) return;
-        graphics.drawString(mc.font, Component.literal(OpsecHud.hudText()), 4, 4, 0xFFFFFF, true);
+        // Text color is full ARGB from MC 1.21.6+ (earlier versions treated a
+        // bare RGB value as opaque regardless of the top byte). 0xFFFFFF has
+        // alpha=0x00 there — fully transparent — which is why this drew
+        // successfully (confirmed via a separate graphics.fill() call at the
+        // same site, which uses an already-correct opaque ARGB shape) but
+        // produced literally nothing visible on 1.21.6+. 0xFFFFFFFF is opaque
+        // white on every supported version.
+        graphics.drawString(mc.font, Component.literal(OpsecHud.hudText()), 4, 4, 0xFFFFFFFF, true);
     }
 }
 //?} else {

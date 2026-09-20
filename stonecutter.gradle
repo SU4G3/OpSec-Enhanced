@@ -8,6 +8,9 @@ stonecutter.active '1.21.6' /* [SC] DO NOT EDIT */
 tasks.register('buildAll') {
     group = 'build'
     description = 'Builds all Minecraft versions'
+    // 26.3 excluded: needs an authlib 10.x + GLFW->SDL migration first (see
+    // versions/26.3/gradle.properties). Build it directly with :26.3:build
+    // once that's done.
     dependsOn ':1.20.1:build', ':1.20.2:build', ':1.20.4:build', ':1.20.6:build',
               ':1.21.1:build', ':1.21.4:build', ':1.21.6:build',
               ':1.21.9:build', ':1.21.11:build',
@@ -18,6 +21,7 @@ tasks.register('buildAll') {
 tasks.register('remapAll') {
     group = 'build'
     description = 'Remaps JARs for all Minecraft versions'
+    // 26.3 excluded — see buildAll's comment above.
     dependsOn ':1.20.1:remapJar', ':1.20.2:remapJar', ':1.20.4:remapJar', ':1.20.6:remapJar',
               ':1.21.1:remapJar', ':1.21.4:remapJar', ':1.21.6:remapJar',
               ':1.21.9:remapJar', ':1.21.11:remapJar',

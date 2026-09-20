@@ -41,6 +41,15 @@ def knownPacksMixinEntry = hasKnownPacksManager ? '\n\t\t"KnownPacksManagerMixin
 def hasPayloadTypeRegistry = isAtLeast(minecraft_version.toString(), "1.20.5")
 def payloadTypeRegistryMixinEntry = hasPayloadTypeRegistry ? '\n\t\t"PayloadTypeRegistryImplMixin",\n\t\t"AbstractChanneledNetworkAddonMixin",' : ''
 
+// GuiHudMixin injects into vanilla Gui.render(...), which no longer exists in
+// its classic form on 26.1+ (fully replaced by an extraction-based pipeline
+// that has already changed shape again between 26.1 and 26.2 at the vanilla
+// level) — stripped there so Mixin doesn't fail to resolve the target method.
+// Leading comma (not trailing): this token is appended after the LAST array
+// entry in opsec.client.mixins.json, right before the closing `]`, unlike the
+// known-packs/payload-type tokens which sit mid-array.
+def guiHudMixinEntry = !isUnobfuscated ? ',\n\t\t"GuiHudMixin"' : ''
+
 // Apply the correct Loom plugin variant per version target:
 // - net.fabricmc.fabric-loom (non-remap) for unobfuscated MC 26.1+
 // - fabric-loom (legacy/remap) for obfuscated MC <=1.21.11
@@ -138,6 +147,7 @@ tasks.withType(ProcessResources).configureEach {
     inputs.property("java_version", javaVersion.toString())
     inputs.property("known_packs_mixin_entry", knownPacksMixinEntry)
     inputs.property("payload_type_registry_mixin_entry", payloadTypeRegistryMixinEntry)
+    inputs.property("gui_hud_mixin_entry", guiHudMixinEntry)
     filesMatching(["fabric.mod.json", "opsec.client.mixins.json"]) {
         expand(
             "version": project.version,
@@ -145,7 +155,8 @@ tasks.withType(ProcessResources).configureEach {
             "mixin_compat_level": mixinCompatLevel,
             "java_version": javaVersion.toString(),
             "known_packs_mixin_entry": knownPacksMixinEntry,
-            "payload_type_registry_mixin_entry": payloadTypeRegistryMixinEntry
+            "payload_type_registry_mixin_entry": payloadTypeRegistryMixinEntry,
+            "gui_hud_mixin_entry": guiHudMixinEntry
         )
     }
 }

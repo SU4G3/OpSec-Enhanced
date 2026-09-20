@@ -51,7 +51,7 @@
 
 ## Requirements
 
-- **Minecraft** 1.20 – 26.2
+- **Minecraft** 1.20 – 26.2 (26.3 not yet supported — see [Known Issues](#known-issues))
 - **Fabric Loader** 0.16.0+ (0.18.5+ for MC 26.1.x)
 - **Fabric API** (matching your Minecraft version)
 
@@ -103,7 +103,7 @@ If settings are changed while connected to a server it is recommended to reconne
 |---------|-------------|
 | **Accent Color** | Cosmetic accent used for the HUD indicator and the multiplayer-screen "OpSec" button |
 | **Compact Layout** | Tighter row spacing in this settings menu |
-| **Show HUD Indicator** | Small on-screen label showing your current spoof brand. **Not available on 26.1+** (Fabric API's HUD rendering moved to a new pipeline there that isn't wired up yet) |
+| **Show HUD Indicator** | Small on-screen label showing your current spoof brand. Rendered via a direct Mixin on 1.20.1-1.21.11 (reliable). On 26.1+, uses Fabric API's newer HUD pipeline instead since vanilla's own rendering internals there change shape between patches — **experimental, less tested; report back if it doesn't show up** |
 | **Custom Profile For This Server** | Save/clear a settings snapshot tied to the currently-connected server address. Only shown when the config screen is opened with an active connection |
 | **Show Alerts** | Display chat messages when tracking is detected |
 | **Show Toasts** | Display popup notifications for important events |
@@ -140,6 +140,11 @@ The `/opsec` command is **off by default** (enable it in Misc → Debug Command)
 - **Key Resolution Exploit Detected**: Server is probing your keys
 - **Resource Pack Fingerprinting Detected**: Suspicious resource pack URL detected
 - **Local URL Scan Detected**: Resource pack targeting your local/private address
+
+## Known Issues
+
+- **26.3 not yet supported.** Minecraft 26.3 shipped a major authlib bump (9.x → 10.x, removing `YggdrasilAuthenticationService`/`YggdrasilUserApiService` entirely) and switched its windowing backend from GLFW to SDL (dropping the native file-dialog module the mod's import/export account feature uses). Both need a real migration, not a quick patch — tracked for a future release rather than shipped half-verified.
+- **HUD Indicator on 26.1+ is experimental.** See the [Miscellaneous Tab](#miscellaneous-tab) table above.
 
 ## Feature Details
 

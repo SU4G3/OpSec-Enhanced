@@ -37,7 +37,7 @@
 		"PacketUtilsMixin",
 		"TabNavigationBarMixin",
 		"TitleScreenMixin",
-		"ChatClickGuardMixin"
+		"ChatClickGuardMixin"${gui_hud_mixin_entry}
 	],
 	"injectors": {
 		"defaultRequire": 1

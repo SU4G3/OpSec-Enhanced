@@ -62,13 +62,11 @@ public class OpsecConfig {
     /*public static final boolean MC_VERSION_HAS_BLOCK_LOCAL_URLS = false;
     *///?}
 
-    // HUD Indicator: not yet available on 26.1+ — see OpsecHud's javadoc for why.
-    // Gates the settings-menu toggle so it isn't offered where it can't do anything.
-    //? if <26.1 {
+    // HUD Indicator is offered on every version now: 1.20.1-1.21.11 render it via
+    // a direct Mixin (see GuiHudMixin), and 26.1+ via Fabric API's HudElementRegistry
+    // (see OpsecHud's javadoc — that path is less battle-tested here than the
+    // mixin one, so it's still worth a real in-game check on 26.x after this change).
     public static final boolean MC_VERSION_HAS_HUD_INDICATOR = true;
-    //?} else {
-    /*public static final boolean MC_VERSION_HAS_HUD_INDICATOR = false;
-    *///?}
 
     private static volatile OpsecConfig INSTANCE;
     private static final Object LOCK = new Object();

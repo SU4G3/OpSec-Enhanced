@@ -53,7 +53,9 @@ public class OpsecClient implements ClientModInitializer {
 		// (modrinth.com/mod/opsec-enhanced) rather than aurickk/OpSec's GitHub
 		// releases, so it's safe to run: it won't misfire against the unrelated
 		// upstream jar/version history anymore.
-		JarIntegrityChecker.checkIntegrity();
+		if (OpsecConfig.getInstance().getSettings().isIntegrityCheckEnabled()) {
+			JarIntegrityChecker.checkIntegrity();
+		}
 
 		// UpdateChecker still points at aurickk/OpSec's own GitHub releases (see
 		// RELEASES_URL in UpdateChecker) — that's upstream's version history, not

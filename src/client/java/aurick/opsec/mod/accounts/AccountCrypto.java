@@ -6,11 +6,15 @@ import net.fabricmc.loader.api.FabricLoader;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Set;
@@ -123,11 +127,34 @@ public final class AccountCrypto {
 
         Files.createDirectories(KEY_PATH.getParent());
         Path tempFile = KEY_PATH.resolveSibling(KEY_PATH.getFileName() + ".tmp");
+        Files.deleteIfExists(tempFile);
+        createRestrictedFile(tempFile);
         Files.write(tempFile, keyBytes);
         Files.move(tempFile, KEY_PATH, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 
+        // Belt-and-suspenders: on POSIX, ATOMIC_MOVE preserves the temp file's permissions
+        // (already owner-only, set below), so this is a no-op; on Windows it's the only
+        // restriction that ever applies, since createRestrictedFile falls through there.
         restrictToOwner(KEY_PATH);
         return keyBytes;
+    }
+
+    /**
+     * Creates an empty file with owner-only permissions from the instant it exists —
+     * avoids the window a "write then chmod after" sequence leaves open, where the key
+     * material briefly sits under the process's default umask (world-readable on a
+     * permissive multi-user Linux box). POSIX only; on Windows this just creates the
+     * file normally, since {@code PosixFilePermissions} isn't supported there anyway
+     * and the OS ACLs already default to the owning user.
+     */
+    private static void createRestrictedFile(Path path) throws IOException {
+        try {
+            FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(
+                Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
+            Files.createFile(path, attr);
+        } catch (UnsupportedOperationException e) {
+            Files.createFile(path);
+        }
     }
 
     /** Best-effort owner-only permissions (POSIX only — no-op and silently ignored on Windows). */

@@ -185,6 +185,12 @@ public class SpoofSettings {
     private boolean commandHistoryGuard = true;
     // Wipe downloads/ and server-resource-packs/ on client shutdown.
     private boolean autoPurgePackCache = false;
+    // Require confirmation before following a server-sent Transfer (1.20.5+) to a
+    // different host/port — an unrequested redirect is also an IP disclosure.
+    private boolean confirmTransfer = true;
+    // The mod's own startup jar-hash check calls out to Modrinth/GitHub/CurseForge.
+    // A privacy tool should let you turn off its own network calls too.
+    private boolean integrityCheckEnabled = true;
 
     // UI Settings
     private int buttonX = -1;
@@ -325,6 +331,12 @@ public class SpoofSettings {
     public boolean isAutoPurgePackCache() { return autoPurgePackCache; }
     public void setAutoPurgePackCache(boolean autoPurgePackCache) { this.autoPurgePackCache = autoPurgePackCache; }
 
+    public boolean isConfirmTransfer() { return confirmTransfer; }
+    public void setConfirmTransfer(boolean confirmTransfer) { this.confirmTransfer = confirmTransfer; }
+
+    public boolean isIntegrityCheckEnabled() { return integrityCheckEnabled; }
+    public void setIntegrityCheckEnabled(boolean integrityCheckEnabled) { this.integrityCheckEnabled = integrityCheckEnabled; }
+
     public int[] getButtonPosition() {
         if (buttonX < 0 || buttonY < 0) return null;
         return new int[] { buttonX, buttonY };
@@ -410,6 +422,8 @@ public class SpoofSettings {
         json.addProperty("scrubPackHeaders", scrubPackHeaders);
         json.addProperty("commandHistoryGuard", commandHistoryGuard);
         json.addProperty("autoPurgePackCache", autoPurgePackCache);
+        json.addProperty("confirmTransfer", confirmTransfer);
+        json.addProperty("integrityCheckEnabled", integrityCheckEnabled);
         json.addProperty("buttonX", buttonX);
         json.addProperty("buttonY", buttonY);
         json.addProperty("skippedUpdateVersion", skippedUpdateVersion);
@@ -517,6 +531,8 @@ public class SpoofSettings {
         if (json.has("scrubPackHeaders")) s.scrubPackHeaders = json.get("scrubPackHeaders").getAsBoolean();
         if (json.has("commandHistoryGuard")) s.commandHistoryGuard = json.get("commandHistoryGuard").getAsBoolean();
         if (json.has("autoPurgePackCache")) s.autoPurgePackCache = json.get("autoPurgePackCache").getAsBoolean();
+        if (json.has("confirmTransfer")) s.confirmTransfer = json.get("confirmTransfer").getAsBoolean();
+        if (json.has("integrityCheckEnabled")) s.integrityCheckEnabled = json.get("integrityCheckEnabled").getAsBoolean();
         if (json.has("buttonX")) s.buttonX = json.get("buttonX").getAsInt();
         if (json.has("buttonY")) s.buttonY = json.get("buttonY").getAsInt();
         if (json.has("skippedUpdateVersion")) s.skippedUpdateVersion = json.get("skippedUpdateVersion").getAsString();
@@ -588,6 +604,8 @@ public class SpoofSettings {
         this.scrubPackHeaders = other.scrubPackHeaders;
         this.commandHistoryGuard = other.commandHistoryGuard;
         this.autoPurgePackCache = other.autoPurgePackCache;
+        this.confirmTransfer = other.confirmTransfer;
+        this.integrityCheckEnabled = other.integrityCheckEnabled;
         this.buttonX = other.buttonX;
         this.buttonY = other.buttonY;
         this.skippedUpdateVersion = other.skippedUpdateVersion;

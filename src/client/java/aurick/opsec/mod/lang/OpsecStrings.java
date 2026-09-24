@@ -119,6 +119,10 @@ public final class OpsecStrings {
     public static final String TOOLTIP_LAZY_SERVER_PING = "opsec.option.lazyServerPing.tooltip";
     public static final String OPTION_COMMAND_HISTORY_GUARD = "opsec.option.commandHistoryGuard";
     public static final String TOOLTIP_COMMAND_HISTORY_GUARD = "opsec.option.commandHistoryGuard.tooltip";
+    public static final String OPTION_CONFIRM_TRANSFER = "opsec.option.confirmTransfer";
+    public static final String TOOLTIP_CONFIRM_TRANSFER = "opsec.option.confirmTransfer.tooltip";
+    public static final String CONFIRM_TRANSFER_TITLE = "opsec.confirmTransfer.title";
+    public static final String CONFIRM_TRANSFER_MESSAGE = "opsec.confirmTransfer.message";
 
     public static final String CHATGUARD_TITLE = "opsec.chatguard.title";
     public static final String CHATGUARD_MESSAGE_COMMAND = "opsec.chatguard.message.command";
@@ -139,6 +143,8 @@ public final class OpsecStrings {
     public static final String TOOLTIP_EXPORT_SANITIZED_LOG = "opsec.button.exportSanitizedLog.tooltip";
     public static final String TOAST_LOG_EXPORTED = "opsec.toast.logExported";
     public static final String TOAST_LOG_EXPORT_FAILED = "opsec.toast.logExportFailed";
+    public static final String OPTION_INTEGRITY_CHECK = "opsec.option.integrityCheck";
+    public static final String TOOLTIP_INTEGRITY_CHECK = "opsec.option.integrityCheck.tooltip";
     public static final String OPTION_HIDE_INSECURE_INDICATORS = "opsec.option.hideInsecureIndicators";
     public static final String OPTION_HIDE_MODIFIED_INDICATORS = "opsec.option.hideModifiedIndicators";
     public static final String OPTION_HIDE_SYSTEM_MSG_INDICATORS = "opsec.option.hideSystemMsgIndicators";

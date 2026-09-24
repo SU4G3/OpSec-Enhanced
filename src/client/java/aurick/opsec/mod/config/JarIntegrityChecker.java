@@ -175,7 +175,11 @@ public final class JarIntegrityChecker {
                 }
 
                 String digestField = asset.get("digest").getAsString(); // "sha256:<hex>"
-                String expectedSha256 = digestField.startsWith("sha256:") ? digestField.substring(7) : digestField;
+                if (!digestField.startsWith("sha256:")) {
+                    Opsec.LOGGER.debug("[OpSec] Matching GitHub asset digest isn't sha256 ({}), trying next mirror", digestField);
+                    return false;
+                }
+                String expectedSha256 = digestField.substring(7);
                 recordVerdict("GitHub", expectedSha256, localSha256);
                 return true;
             }

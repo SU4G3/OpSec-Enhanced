@@ -448,6 +448,11 @@ public class OpsecConfigScreen extends Screen {
                 .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_BLOCK_COOKIES)))
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_BLOCK_COOKIES),
                 (button, value) -> { settings.setBlockCookies(value); config.save(); }));
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isConfirmTransfer())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_CONFIRM_TRANSFER)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_CONFIRM_TRANSFER),
+                (button, value) -> { settings.setConfirmTransfer(value); config.save(); }));
         //?}
 
         widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isNormalizeClientInfo())
@@ -528,6 +533,11 @@ public class OpsecConfigScreen extends Screen {
                 .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_LOG_SCRUBBER)))
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_LOG_SCRUBBER),
                 (button, value) -> { settings.setLogScrubberEnabled(value); config.save(); }));
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isIntegrityCheckEnabled())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_INTEGRITY_CHECK)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_INTEGRITY_CHECK),
+                (button, value) -> { settings.setIntegrityCheckEnabled(value); config.save(); }));
 
         widgets.add(Button.builder(OpsecLang.component(OpsecStrings.BUTTON_EXPORT_SANITIZED_LOG), button -> {
                 boolean success = aurick.opsec.mod.util.LogExportHandler.exportSanitizedLog();

@@ -1020,11 +1020,29 @@ public class SessionAccount implements Account {
     // JSON serialization
     @Override
     public JsonObject toJson() {
+        return toJson(true);
+    }
+
+    /**
+     * Portable export: tokens are written in plaintext instead of {@link AccountCrypto}-encrypted.
+     * Encrypting an export with this machine's local key (never itself included in the export)
+     * silently breaks import on any other machine, or after this one's key is regenerated —
+     * {@link AccountCrypto#decrypt} can't tell "wrong key" from "corrupted" and returns an empty
+     * string either way, which then passes {@link #hasValidInfo()} and only fails later, confusingly,
+     * at login. Plaintext at least fails the same way it always could: treat the exported file as
+     * sensitive, matching the same trust boundary import/export already documents.
+     */
+    @Override
+    public JsonObject toJsonPortable() {
+        return toJson(false);
+    }
+
+    private JsonObject toJson(boolean encrypt) {
         JsonObject json = new JsonObject();
         json.addProperty("type", "session");
-        json.addProperty("accessToken", AccountCrypto.encrypt(accessToken));
+        json.addProperty("accessToken", encrypt ? AccountCrypto.encrypt(accessToken) : accessToken);
         if (refreshToken != null && !refreshToken.isBlank()) {
-            json.addProperty("refreshToken", AccountCrypto.encrypt(refreshToken));
+            json.addProperty("refreshToken", encrypt ? AccountCrypto.encrypt(refreshToken) : refreshToken);
         }
         json.addProperty("username", username);
         json.addProperty("uuid", uuid);

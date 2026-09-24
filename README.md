@@ -227,7 +227,7 @@ Off by default, since it does mean the server's view of your settings won't matc
 
 Decompiling vanilla's `DownloadedPackSource` shows it attaches `X-Minecraft-Username`, `X-Minecraft-UUID`, `X-Minecraft-Version`, `X-Minecraft-Version-ID`, `X-Minecraft-Pack-Format`, and a version-specific `User-Agent` to every server resource pack download request. The pack host sees all of this — including a third-party CDN that isn't the game server itself.
 
-OpSec replaces each of these with a neutral placeholder value before the request goes out. Replacement is by header name, so it's a no-op for any header a given Minecraft version doesn't send.
+OpSec replaces the strictly-identifying ones (`X-Minecraft-Username`, `X-Minecraft-UUID`, `User-Agent`) with a neutral placeholder before the request goes out. Replacement is by header name, so it's a no-op for any header a given Minecraft version doesn't send. `Version`/`Version-ID`/`Pack-Format` are left alone — they aren't personally identifying on their own, and some pack CDNs may use them to serve the correct pack file, so faking them risks breaking the download for no privacy benefit.
 
 On by default (MC 1.20.3+, when the multi-pack download system was introduced).
 

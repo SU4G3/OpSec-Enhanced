@@ -17,8 +17,12 @@ import java.util.regex.Pattern;
 public final class LogScrubber {
 
     private static final Pattern WINDOWS_USER_PATH = Pattern.compile("([A-Za-z]:\\\\Users\\\\)([^\\\\/:*?\"<>|\\r\\n]+)");
-    private static final Pattern UNIX_HOME_PATH = Pattern.compile("(/home/)([^/\\s]+)");
-    private static final Pattern MAC_USER_PATH = Pattern.compile("(/Users/)([^/\\s]+)");
+    // Negative lookbehind excludes word chars/dots immediately before the slash, so a URL
+    // path like "example.com/home/foo" (preceded by "m") isn't mistaken for an OS path —
+    // a real absolute path only ever starts at the beginning of a line/string or after
+    // whitespace/punctuation, never mid-domain.
+    private static final Pattern UNIX_HOME_PATH = Pattern.compile("(?<![\\w.])(/home/)([^/\\s]+)");
+    private static final Pattern MAC_USER_PATH = Pattern.compile("(?<![\\w.])(/Users/)([^/\\s]+)");
     private static final Pattern IPV4 = Pattern.compile("\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b");
     private static final Pattern IPV6 = Pattern.compile("\\b(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}\\b");
 

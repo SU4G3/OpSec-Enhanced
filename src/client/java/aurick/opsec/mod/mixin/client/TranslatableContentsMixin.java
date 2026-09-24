@@ -113,13 +113,24 @@ public abstract class TranslatableContentsMixin implements OpsecFromPacketAccess
         // In exploit context — always notify header (cooldown prevents spam)
         TranslationProtectionHandler.notifyExploitDetected();
 
+        OpsecConfig config = OpsecConfig.getInstance();
+        SpoofSettings settings = config.getSettings();
+
         if (ModRegistry.isVanillaTranslationKey(translationKey)) {
+            // Client Information Normalizer claims language=en_us; a server-authored
+            // component (sign/anvil default text, same mechanism as the mod-keybind sign
+            // exploit — see wurst.wiki's sign_translation_vulnerability) can otherwise
+            // still observe the player's real configured language via a vanilla key that
+            // differs by locale. Resolve against the game's own built-in en_us table here
+            // instead, so the claim holds up against that specific probe.
+            if (settings.isNormalizeClientInfo()) {
+                String enUsValue = aurick.opsec.mod.util.VanillaEnUsLanguage.get(translationKey, defaultValue);
+                opsec$logBlocked(translationKey, enUsValue);
+                return enUsValue;
+            }
             opsec$reportPassthrough(translationKey, defaultValue);
             return OPSEC_ALLOW_ORIGINAL;
         }
-
-        OpsecConfig config = OpsecConfig.getInstance();
-        SpoofSettings settings = config.getSettings();
 
         // If protection is disabled, still log but allow resolution
         if (!config.isTranslationProtectionEnabled()) {

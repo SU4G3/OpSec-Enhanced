@@ -26,6 +26,16 @@ public interface Account {
     JsonObject toJson();
 
     /**
+     * Serialization for portable export/import, as opposed to {@link #toJson()}'s
+     * on-disk save format. Defaults to {@link #toJson()} — only {@link SessionAccount}
+     * needs to differ, since it's the only implementation with a secret encrypted under
+     * a machine-local key that an export can't carry along with it.
+     */
+    default JsonObject toJsonPortable() {
+        return toJson();
+    }
+
+    /**
      * Whether this is a cracked/offline account (no authentication).
      */
     boolean isCracked();

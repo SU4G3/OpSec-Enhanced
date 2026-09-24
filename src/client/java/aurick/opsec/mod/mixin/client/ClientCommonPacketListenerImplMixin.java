@@ -51,6 +51,53 @@ public abstract class ClientCommonPacketListenerImplMixin {
             ci.cancel();
         }
     }
+
+    @org.spongepowered.asm.mixin.Shadow
+    public void handleTransfer(net.minecraft.network.protocol.common.ClientboundTransferPacket packet) {
+        throw new UnsupportedOperationException();
+    }
+
+    @org.spongepowered.asm.mixin.Unique
+    private static volatile net.minecraft.network.protocol.common.ClientboundTransferPacket opsec$approvedTransfer = null;
+
+    // Transfer (also added 1.20.5) makes the client reconnect to a different host/port
+    // with zero confirmation — an unrequested redirect discloses your IP to wherever
+    // you're sent. Cancels once to show a confirm prompt, then re-invokes handleTransfer
+    // (bypassing this same check via identity match on the approved packet) if accepted.
+    @Inject(method = "handleTransfer", at = @At("HEAD"), cancellable = true)
+    private void opsec$onTransfer(net.minecraft.network.protocol.common.ClientboundTransferPacket packet, CallbackInfo ci) {
+        if (packet == opsec$approvedTransfer) {
+            opsec$approvedTransfer = null;
+            return;
+        }
+        if (!aurick.opsec.mod.config.OpsecConfig.getInstance().getSettings().isConfirmTransfer()) {
+            return;
+        }
+        ci.cancel();
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        //? if >=26.2 {
+        /*net.minecraft.client.gui.screens.Screen previous = mc.gui.screen();*/
+        //?} else {
+        net.minecraft.client.gui.screens.Screen previous = mc.screen;
+        //?}
+        net.minecraft.client.gui.screens.ConfirmScreen confirmScreen = new net.minecraft.client.gui.screens.ConfirmScreen(confirmed -> {
+            //? if >=26.2 {
+            /*mc.setScreenAndShow(previous);*/
+            //?} else {
+            mc.setScreen(previous);
+            //?}
+            if (confirmed) {
+                opsec$approvedTransfer = packet;
+                this.handleTransfer(packet);
+            }
+        }, OpsecLang.component(OpsecStrings.CONFIRM_TRANSFER_TITLE),
+           OpsecLang.component(OpsecStrings.CONFIRM_TRANSFER_MESSAGE, packet.host(), packet.port()));
+        //? if >=26.2 {
+        /*mc.setScreenAndShow(confirmScreen);*/
+        //?} else {
+        mc.setScreen(confirmScreen);
+        //?}
+    }
     //?}
 }
 //?} elif >=1.20.2 {

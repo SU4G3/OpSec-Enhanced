@@ -228,7 +228,7 @@ public class AccountManager {
         JsonObject json = new JsonObject();
         JsonArray accountsArray = new JsonArray();
         for (Account account : accounts) {
-            accountsArray.add(account.toJson());
+            accountsArray.add(account.toJsonPortable());
         }
         json.add("accounts", accountsArray);
         return GSON.toJson(json);

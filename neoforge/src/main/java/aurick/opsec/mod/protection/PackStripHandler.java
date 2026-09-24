@@ -1,0 +1,175 @@
+package aurick.opsec.mod.protection;
+
+import aurick.opsec.mod.config.OpsecConfig;
+import aurick.opsec.mod.config.SpoofSettings;
+//? if >=1.21.11 {
+/*import net.minecraft.util.Util;*/
+//?} else {
+import net.minecraft.Util;
+//?}
+
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/** Coordination state for the Bypass Server Pack Requirement feature. */
+public final class PackStripHandler {
+    private PackStripHandler() {}
+
+    private static final Set<UUID> loadForReal = ConcurrentHashMap.newKeySet();
+    // Tracked for overlay eligibility (required-only) and rearrange-on-open logic.
+    private static final Set<UUID> requiredPacks = ConcurrentHashMap.newKeySet();
+    // Packs we wrap with LangOnlyPackResources. In MANUAL this is required-only; in
+    // ASK / ALWAYS_ON we also wrap optional packs so they can be stripped by default.
+    private static final Set<UUID> wrappedPacks = ConcurrentHashMap.newKeySet();
+    // Non-wrapped optional server packs the user explicitly unselected in pack-select.
+    // Persists so PackRepository.rebuildSelected (called from commit and post-commit
+    // reload) consistently skips auto-preserve for these packs.
+    private static final Set<UUID> userUnselectedOptional = ConcurrentHashMap.newKeySet();
+    // Gate so fingerprint-burst pushes (servers pushing 24+ packs) don't spawn 24 overlays.
+    private static final AtomicBoolean overlayShownThisSession = new AtomicBoolean(false);
+
+    public static void onPackPush(UUID id, String url, boolean required) {
+        OpsecConfig config = OpsecConfig.getInstance();
+        boolean stripPack = config.shouldStripPack();          // whole-pack lang-only strip (EP-gated)
+        boolean stripShaders = config.shouldStripModShaders();  // per-mod shader strip (active under EP)
+
+        if (!stripPack && !stripShaders) return; // neither feature → behave like vanilla
+
+        SpoofSettings.StripMode mode = config.getPackStripMode();
+
+        // loadForReal skips the lang-only strip: on when whole-pack strip is off (shader-only) or
+        // MANUAL; ASK/ALWAYS_ON start the pack stripped.
+        if (!stripPack || mode == SpoofSettings.StripMode.MANUAL) {
+            loadForReal.add(id);
+        } else {
+            loadForReal.remove(id);
+        }
+
+        if (required) {
+            requiredPacks.add(id);
+        } else {
+            requiredPacks.remove(id);
+        }
+
+        // Wrap on required / non-MANUAL / shader-strip, so optional packs with a shader payload
+        // are filtered too.
+        boolean shouldWrap = required || mode != SpoofSettings.StripMode.MANUAL || stripShaders;
+        if (shouldWrap) {
+            wrappedPacks.add(id);
+        } else {
+            wrappedPacks.remove(id);
+        }
+
+        // Same-UUID re-push: drop any persisted "user unselected" opt-out so the
+        // freshly-pushed pack enters as selected (matches vanilla first-push flow).
+        userUnselectedOptional.remove(id);
+
+        // Consent overlay is whole-pack-strip (ASK) only.
+        if (stripPack && required && mode == SpoofSettings.StripMode.ASK
+                && overlayShownThisSession.compareAndSet(false, true)) {
+            if (!isHttpUrl(url)) return; // vanilla will reject with INVALID_URL
+            PackStripOverlay.enqueue(id, required);
+        }
+    }
+
+    private static boolean isHttpUrl(String url) {
+        try {
+            //? if >=1.21 {
+            Util.parseAndValidateUntrustedUri(url);
+            //?} else {
+            /*java.net.URI uri = java.net.URI.create(url);
+            String scheme = uri.getScheme();
+            if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
+                return false;
+            }
+            *///?}
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static void onPop(Optional<UUID> maybeId) {
+        if (maybeId == null || maybeId.isEmpty()) {
+            loadForReal.clear();
+            requiredPacks.clear();
+            wrappedPacks.clear();
+            userUnselectedOptional.clear();
+            ShaderStripTracker.clear();
+            return;
+        }
+        UUID id = maybeId.get();
+        loadForReal.remove(id);
+        requiredPacks.remove(id);
+        wrappedPacks.remove(id);
+        userUnselectedOptional.remove(id);
+        // Re-arm shader-strip alerts so a genuine re-push of this pack alerts again.
+        ShaderStripTracker.clear();
+    }
+
+    public static void clearAll() {
+        loadForReal.clear();
+        requiredPacks.clear();
+        wrappedPacks.clear();
+        userUnselectedOptional.clear();
+        overlayShownThisSession.set(false);
+        ShaderStripTracker.clear();
+    }
+
+    public static void markLoadForReal(UUID id) {
+        if (id != null) loadForReal.add(id);
+    }
+
+    public static void clearLoadForReal(UUID id) {
+        if (id != null) loadForReal.remove(id);
+    }
+
+    public static boolean isLoadForReal(UUID id) {
+        return id != null && loadForReal.contains(id);
+    }
+
+    public static boolean isRequired(UUID id) {
+        return id != null && requiredPacks.contains(id);
+    }
+
+    /** True iff the pack was wrapped with {@link LangOnlyPackResources} at push time. */
+    public static boolean isWrapped(UUID id) {
+        return id != null && wrappedPacks.contains(id);
+    }
+
+    public static void markUserUnselectedOptional(UUID id) {
+        if (id != null) userUnselectedOptional.add(id);
+    }
+
+    public static void clearUserUnselectedOptional(UUID id) {
+        if (id != null) userUnselectedOptional.remove(id);
+    }
+
+    public static boolean isUserUnselectedOptional(UUID id) {
+        return id != null && userUnselectedOptional.contains(id);
+    }
+
+    // 1.20.2+ multi-pack format: "server/<serial>/<uuid>" (DownloadedPackSource#loadRequestedPacks, "server/%08X/%s").
+    // 1.20.1 single-pack era uses the literal "server" — mapped to a sentinel UUID.
+    public static final String SERVER_PACK_PREFIX = "server/";
+    public static final String LEGACY_SERVER_PACK_ID = "server";
+    public static final UUID LEGACY_SERVER_PACK_UUID =
+        UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+    /** Parses a downloaded-server pack id back into its UUID. Empty for any other shape. */
+    public static Optional<UUID> packIdToUuid(String packId) {
+        if (packId == null) return Optional.empty();
+        if (LEGACY_SERVER_PACK_ID.equals(packId)) return Optional.of(LEGACY_SERVER_PACK_UUID);
+        if (!packId.startsWith(SERVER_PACK_PREFIX)) return Optional.empty();
+        int lastSlash = packId.lastIndexOf('/');
+        if (lastSlash < SERVER_PACK_PREFIX.length() - 1) return Optional.empty();
+        try {
+            return Optional.of(UUID.fromString(packId.substring(lastSlash + 1)));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+}

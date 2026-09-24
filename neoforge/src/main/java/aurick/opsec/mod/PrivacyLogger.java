@@ -1,0 +1,328 @@
+package aurick.opsec.mod;
+
+import aurick.opsec.mod.config.OpsecConfig;
+import aurick.opsec.mod.config.OpsecConstants;
+import aurick.opsec.mod.lang.OpsecLang;
+import aurick.opsec.mod.lang.OpsecStrings;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+
+import java.net.URI;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Manages privacy-related alerts, toasts, and logging for exploit detection.
+ * Provides methods to notify users of detected tracking attempts and security events.
+ */
+public class PrivacyLogger {
+    // Bounded LRU cache for toast cooldowns
+    private static final Map<String, Long> toastCooldowns = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Long> eldest) {
+            return size() > OpsecConstants.Limits.MAX_TOAST_COOLDOWNS;
+        }
+    };
+    private static final Object COOLDOWN_LOCK = new Object();
+    
+    private static final Set<String> pendingPortScans = ConcurrentHashMap.newKeySet();
+    private static final AtomicInteger totalPortScansBlocked = new AtomicInteger(0);
+    private static final AtomicBoolean portScanSummaryShown = new AtomicBoolean(false);
+    
+    private static boolean isToastOnCooldown(String cooldownKey, long cooldownMs) {
+        long now = System.currentTimeMillis();
+        synchronized (COOLDOWN_LOCK) {
+        Long lastToast = toastCooldowns.get(cooldownKey);
+        
+        if (lastToast != null && (now - lastToast) < cooldownMs) {
+            return true;
+        }
+        
+        toastCooldowns.put(cooldownKey, now);
+        return false;
+        }
+    }
+    
+    public static void clearCooldowns() {
+        synchronized (COOLDOWN_LOCK) {
+        toastCooldowns.clear();
+        }
+    }
+    
+    public enum AlertType {
+        WARNING(ChatFormatting.YELLOW, "⚠"),
+        DANGER(ChatFormatting.RED, "⛔");
+        
+        private final ChatFormatting color;
+        private final String icon;
+        
+        AlertType(ChatFormatting color, String icon) {
+            this.color = color;
+            this.icon = icon;
+        }
+        
+        public ChatFormatting getColor() { return color; }
+        public String getIcon() { return icon; }
+    }
+    
+    public static void alert(AlertType type, String message) {
+        if (!OpsecConfig.getInstance().shouldShowAlerts()) return;
+        sendMessage(type, message);
+    }
+    
+    public static void toast(AlertType type, String title, String message) {
+        if (!OpsecConfig.getInstance().shouldShowToasts()) return;
+        try {
+            showToast(type, title, message);
+        } catch (RuntimeException e) {
+            Opsec.LOGGER.error("[OpSec] Exception in toast(): {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Show a toast with title only (no description).
+     */
+    public static void toast(AlertType type, String title) {
+        toast(type, title, null);
+    }
+    
+    private static void toastWithCooldown(AlertType type, String title, String message, String cooldownKey, long cooldownMs) {
+        if (isToastOnCooldown(cooldownKey, cooldownMs)) return;
+        toast(type, title, message);
+    }
+
+    /** Cooldown-gated toast (title only), keyed by {@code cooldownKey} like the other exploit toasts. */
+    public static void toastWithCooldown(AlertType type, String title, String cooldownKey, long cooldownMs) {
+        toastWithCooldown(type, title, null, cooldownKey, cooldownMs);
+    }
+
+    private static void showToast(AlertType type, String title, String message) {
+        try {
+            Minecraft client = Minecraft.getInstance();
+            if (client == null) return;
+            
+            if (!client.isSameThread()) {
+                client.execute(() -> showToast(type, title, message));
+                return;
+            }
+            
+            //? if >=26.2 {
+            /*var toastComponent = client.gui.toastManager();*/
+            //?} else if >=1.21.2 {
+            /*var toastComponent = client.getToastManager();
+            *///?} else {
+            var toastComponent = client.getToasts();
+            //?}
+            if (toastComponent == null) return;
+            
+            Component titleComponent = Component.literal(type.getIcon() + " " + title).withStyle(type.getColor());
+            Component messageComponent = (message != null && !message.isEmpty()) 
+                ? Component.literal(message).withStyle(ChatFormatting.GRAY) 
+                : null;
+            
+            //? if >=1.20.3 {
+            SystemToast.add(toastComponent, SystemToast.SystemToastId.PACK_LOAD_FAILURE, titleComponent, messageComponent);
+            //?} else {
+            /*SystemToast.add(toastComponent, SystemToast.SystemToastIds.PACK_LOAD_FAILURE, titleComponent, messageComponent);
+            *///?}
+        } catch (RuntimeException e) {
+            Opsec.LOGGER.error("[OpSec] Exception showing toast: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Show a toast with pre-built components (no icon prefix added).
+     */
+    public static void showToastRaw(Component titleComponent, Component messageComponent) {
+        try {
+            Minecraft client = Minecraft.getInstance();
+            if (client == null) return;
+
+            if (!client.isSameThread()) {
+                client.execute(() -> showToastRaw(titleComponent, messageComponent));
+                return;
+            }
+
+            //? if >=26.2 {
+            /*var toastComponent = client.gui.toastManager();*/
+            //?} else if >=1.21.2 {
+            /*var toastComponent = client.getToastManager();
+            *///?} else {
+            var toastComponent = client.getToasts();
+            //?}
+            if (toastComponent == null) return;
+
+            //? if >=1.20.3 {
+            SystemToast.add(toastComponent, SystemToast.SystemToastId.PACK_LOAD_FAILURE, titleComponent, messageComponent);
+            //?} else {
+            /*SystemToast.add(toastComponent, SystemToast.SystemToastIds.PACK_LOAD_FAILURE, titleComponent, messageComponent);
+            *///?}
+        } catch (RuntimeException e) {
+            Opsec.LOGGER.error("[OpSec] Exception showing toast: {}", e.getMessage());
+        }
+    }
+
+    public static void sendMessage(AlertType type, String message) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null) {
+            Opsec.LOGGER.info("[{}] {}", type.name(), message);
+            return;
+        }
+
+        // displayClientMessage triggers chat layout (Font width calculations) which
+        // touches RenderSystem in 1.21.11+. Must run on the render/main thread.
+        if (!client.isSameThread()) {
+            client.execute(() -> sendMessage(type, message));
+            return;
+        }
+
+        MutableComponent component = Component.literal("[OpSec] ")
+                .withStyle(ChatFormatting.DARK_PURPLE)
+                .append(Component.literal(message).withStyle(type.getColor()));
+
+        //? if >=26.1 {
+        /*client.player.sendSystemMessage(component);*/
+        //?} else {
+        client.player.displayClientMessage(component, false);
+        //?}
+    }
+
+    /**
+     * Send keybind detail message without header prefix (just the keybind info).
+     */
+    public static void sendKeybindDetail(String detail) {
+        sendKeybindDetail(Component.literal(detail).withStyle(ChatFormatting.DARK_GRAY));
+    }
+
+    public static void sendKeybindDetail(Component component) {
+        if (!OpsecConfig.getInstance().shouldShowAlerts()) return;
+
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null) return;
+
+        if (!client.isSameThread()) {
+            client.execute(() -> sendKeybindDetail(component));
+            return;
+        }
+
+        //? if >=26.1 {
+        /*client.player.sendSystemMessage(component);*/
+        //?} else {
+        client.player.displayClientMessage(component, false);
+        //?}
+    }
+    
+    public static void logDetection(String category, String details) {
+        if (!OpsecConfig.getInstance().isLogDetections()) return;
+        Opsec.LOGGER.info("[Detection:{}] {}", category, details);
+    }
+    
+    /**
+     * Alert for local port scan detection.
+     * Detection always happens, blocking is optional based on protection setting.
+     */
+    public static void alertLocalPortScanDetected(String url, boolean blocked) {
+        // Port 0 is a guaranteed-failed TCP connect — not a real local scan target.
+        // The TrackPack pattern detector already catches port-0 hash-probing.
+        try {
+            if (new URI(url).getPort() == 0) return;
+        } catch (Exception ignored) {}
+
+        String hostPort = extractHostPort(url);
+        String action = blocked ? "Blocked" : "Detected (protection OFF)";
+        logDetection("LocalPack", action + " local URL probe: " + url);
+        
+        totalPortScansBlocked.incrementAndGet();
+        
+        // Limit size of pending port scans
+        if (pendingPortScans.size() < OpsecConstants.Limits.MAX_PENDING_PORT_SCANS) {
+        pendingPortScans.add(hostPort);
+        }
+        
+        if (!isToastOnCooldown("localpack_alert", OpsecConstants.Timeouts.EXPLOIT_TOAST_COOLDOWN_MS)) {
+            alert(AlertType.DANGER, OpsecLang.tr(
+                blocked ? OpsecStrings.ALERT_PORTSCAN_BLOCKED : OpsecStrings.ALERT_PORTSCAN_DETECTED,
+                hostPort));
+            toast(AlertType.DANGER, OpsecLang.tr(OpsecStrings.TOAST_PORTSCAN));
+        }
+    }
+    
+    public static void showPortScanSummary() {
+        if (portScanSummaryShown.get() || pendingPortScans.isEmpty()) return;
+
+        portScanSummaryShown.set(true);
+        int uniquePorts = pendingPortScans.size();
+        int total = totalPortScansBlocked.get();
+
+        if (uniquePorts == 1) {
+            String port = pendingPortScans.iterator().next();
+            alert(AlertType.DANGER, OpsecLang.tr(OpsecStrings.ALERT_PORTSCAN_SUMMARY_SINGLE, total, port));
+        } else {
+            StringBuilder portsStr = new StringBuilder();
+            int shown = 0;
+            for (String port : pendingPortScans) {
+                if (shown > 0) portsStr.append(", ");
+                portsStr.append(port);
+                if (++shown >= OpsecConstants.Display.MAX_PORTS_TO_SHOW) {
+                    if (uniquePorts > OpsecConstants.Display.MAX_PORTS_TO_SHOW)
+                        portsStr.append(OpsecLang.tr(OpsecStrings.ALERT_PORTSCAN_SUMMARY_MORE,
+                            uniquePorts - OpsecConstants.Display.MAX_PORTS_TO_SHOW));
+                    break;
+                }
+            }
+            alert(AlertType.DANGER, OpsecLang.tr(OpsecStrings.ALERT_PORTSCAN_SUMMARY_MULTI, total, portsStr.toString()));
+        }
+
+        Opsec.LOGGER.info("[OpSec] Port scan summary: detected {} requests to {} unique targets", total, uniquePorts);
+    }
+
+    public static void resetPortScanTracking() {
+        pendingPortScans.clear();
+        totalPortScansBlocked.set(0);
+        portScanSummaryShown.set(false);
+    }
+
+    // Matches JWT-shaped tokens (header.payload.signature) and long opaque bearer-style
+    // tokens/secrets (20+ base64url characters) that auth API error bodies can echo back.
+    // Cheap `contains`/length guard below skips the regex entirely for ordinary log lines.
+    private static final java.util.regex.Pattern SECRET_PATTERN = java.util.regex.Pattern.compile(
+        "eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}" // JWT
+        + "|[A-Za-z0-9_-]{40,}" // long opaque token/secret run
+    );
+
+    /**
+     * Redacts token-shaped substrings (JWTs, long opaque bearer tokens) from text before it
+     * reaches a log file or crash report. Intended for the handful of call sites that log
+     * truncated external API response bodies, which can otherwise echo a secret back verbatim
+     * on certain error responses.
+     */
+    public static String redactSecrets(String text) {
+        if (text == null || text.length() < 40) return text;
+        return SECRET_PATTERN.matcher(text).replaceAll("[REDACTED]");
+    }
+
+    private static String extractHostPort(String url) {
+        try {
+            URI uri = new URI(url);
+            String host = uri.getHost();
+            int port = uri.getPort();
+            if (port == -1) {
+                port = "https".equals(uri.getScheme()) ? 443 : 80;
+            }
+            return host + ":" + port;
+        } catch (Exception e) {
+            String stripped = url.replaceFirst("^https?://", "");
+            int slashIdx = stripped.indexOf('/');
+            if (slashIdx > 0) stripped = stripped.substring(0, slashIdx);
+            return stripped.isEmpty() ? url : stripped;
+        }
+    }
+    
+}

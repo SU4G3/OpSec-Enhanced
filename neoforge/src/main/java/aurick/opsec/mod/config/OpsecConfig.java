@@ -1,0 +1,499 @@
+package aurick.opsec.mod.config;
+
+import aurick.opsec.mod.Opsec;
+import aurick.opsec.mod.tracking.ModRegistry;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import aurick.opsec.mod.util.NeoCompat;
+
+/**
+ * Main configuration manager for OpSec mod.
+ * Handles loading, saving, and validating configuration settings.
+ * Uses thread-safe singleton pattern with double-checked locking.
+ */
+public class OpsecConfig {
+
+    private static final Gson GSON = new GsonBuilder()
+        .setPrettyPrinting()
+        .create();
+    private static final Path CONFIG_PATH = NeoCompat.getConfigDir()
+        .resolve("opsec.json");
+
+    public static final boolean EXPLOIT_PREVENTER_LOADED =
+        NeoCompat.isModLoaded("exploitpreventer");
+
+    // Chat signing and telemetry blocking overlap with dedicated mods. When one is
+    // present OpSec stands down on the shared feature (greys the control out) rather
+    // than double-stripping signatures / double-disabling telemetry. Unlike EP this is
+    // per-feature: No Chat Reports only covers signing; No Prying Eyes covers both.
+    public static final boolean NO_CHAT_REPORTS_LOADED =
+        NeoCompat.isModLoaded("nochatreports");
+    public static final boolean NO_PRYING_EYES_LOADED =
+        NeoCompat.isModLoaded("nopryingeyes");
+
+    /** Chat signing is handled by an external mod (No Chat Reports or No Prying Eyes). */
+    public static final boolean CHAT_SIGNING_MANAGED_EXTERNALLY =
+        NO_CHAT_REPORTS_LOADED || NO_PRYING_EYES_LOADED;
+
+    /** Telemetry blocking is handled by an external mod (No Chat Reports or No Prying Eyes). */
+    public static final boolean TELEMETRY_MANAGED_EXTERNALLY =
+        NO_CHAT_REPORTS_LOADED || NO_PRYING_EYES_LOADED;
+
+    // Per-MC-version feature gate: DownloadQueue + multi-pack stacking arrived 1.20.3.
+    // 1.20.1/1.20.2 isolate the pack cache via LegacyDownloadedPackSourceMixin instead.
+    //? if >=1.20.3 {
+    public static final boolean MC_VERSION_HAS_MULTI_PACK = true;
+    //?} else {
+    /*public static final boolean MC_VERSION_HAS_MULTI_PACK = false;
+    *///?}
+
+    // Block Local URLs: 1.20.1's HttpUtil lambda targeting was unreliable in practice; off there.
+    //? if >=1.20.2 {
+    public static final boolean MC_VERSION_HAS_BLOCK_LOCAL_URLS = true;
+    //?} else {
+    /*public static final boolean MC_VERSION_HAS_BLOCK_LOCAL_URLS = false;
+    *///?}
+
+    // HUD Indicator is offered on every version now: 1.20.1-1.21.11 render it via
+    // a direct Mixin (see GuiHudMixin), and 26.1+ via Fabric API's HudElementRegistry
+    // (see OpsecHud's javadoc — that path is less battle-tested here than the
+    // mixin one, so it's still worth a real in-game check on 26.x after this change).
+    public static final boolean MC_VERSION_HAS_HUD_INDICATOR = true;
+
+    private static volatile OpsecConfig INSTANCE;
+    private static final Object LOCK = new Object();
+
+    // The saved global defaults. getSettings() returns `settings`, which points here
+    // unless a per-server profile is currently active (see setCurrentServer) — every
+    // existing settings.xxx() call site in this class and elsewhere in the mod keeps
+    // working unmodified either way, since it's always reading through the same field.
+    private SpoofSettings defaultSettings = new SpoofSettings();
+    private volatile SpoofSettings settings = defaultSettings;
+    private final Map<String, SpoofSettings> serverProfiles = new ConcurrentHashMap<>();
+
+    private volatile String currentServer = null;
+    private volatile boolean serverConnected = false;
+
+    private OpsecConfig() {
+        load();
+        if (EXPLOIT_PREVENTER_LOADED) {
+            Opsec.LOGGER.info(
+                "[OpSec] ExploitPreventer detected - compatibility mode active."
+            );
+        }
+        if (NO_CHAT_REPORTS_LOADED) {
+            Opsec.LOGGER.info(
+                "[OpSec] No Chat Reports detected - deferring chat signing and telemetry to it."
+            );
+        }
+        if (NO_PRYING_EYES_LOADED) {
+            Opsec.LOGGER.info(
+                "[OpSec] No Prying Eyes detected - deferring chat signing and telemetry to it."
+            );
+        }
+    }
+
+    /** Display name of the mod managing chat signing, or {@code null} if OpSec manages it. */
+    public static String chatSigningManagerName() {
+        if (NO_CHAT_REPORTS_LOADED) return "No Chat Reports";
+        if (NO_PRYING_EYES_LOADED) return "No Prying Eyes";
+        return null;
+    }
+
+    /** Display name of the mod managing telemetry, or {@code null} if OpSec manages it. */
+    public static String telemetryManagerName() {
+        if (NO_CHAT_REPORTS_LOADED) return "No Chat Reports";
+        if (NO_PRYING_EYES_LOADED) return "No Prying Eyes";
+        return null;
+    }
+
+    public static OpsecConfig getInstance() {
+        if (INSTANCE == null) {
+            synchronized (LOCK) {
+                if (INSTANCE == null) {
+                    INSTANCE = new OpsecConfig();
+                }
+            }
+        }
+        return INSTANCE;
+    }
+
+    public void load() {
+        if (!Files.exists(CONFIG_PATH)) {
+            Opsec.LOGGER.info("[OpSec] Creating default config");
+            save();
+            return;
+        }
+
+        try {
+            String content = Files.readString(CONFIG_PATH);
+            if (content == null || content.trim().isEmpty()) {
+                Opsec.LOGGER.warn(
+                    "[OpSec] Config file is empty, using defaults"
+                );
+                resetToDefaults();
+                save();
+                return;
+            }
+
+            JsonObject json = JsonParser.parseString(content).getAsJsonObject();
+
+            if (json.has("settings")) {
+                defaultSettings = SpoofSettings.fromJson(
+                    json.getAsJsonObject("settings")
+                );
+            } else if (json.has("defaultSettings")) {
+                defaultSettings = SpoofSettings.fromJson(
+                    json.getAsJsonObject("defaultSettings")
+                );
+            }
+            settings = defaultSettings;
+
+            serverProfiles.clear();
+            if (json.has("serverProfiles")) {
+                JsonObject profiles = json.getAsJsonObject("serverProfiles");
+                for (String address : profiles.keySet()) {
+                    try {
+                        SpoofSettings profile = SpoofSettings.fromJson(profiles.getAsJsonObject(address));
+                        validateAndCorrectSettings(profile);
+                        serverProfiles.put(address, profile);
+                    } catch (Exception e) {
+                        Opsec.LOGGER.warn("[OpSec] Dropping malformed server profile for '{}': {}", address, e.getMessage());
+                    }
+                }
+            }
+
+            if (!validateAndCorrectSettings(defaultSettings)) {
+                Opsec.LOGGER.warn(
+                    "[OpSec] Config validation failed, resetting to defaults"
+                );
+                resetToDefaults();
+                save();
+                return;
+            }
+
+            Opsec.LOGGER.info(
+                "[OpSec] Loaded config - spoofAsVanilla: {}, {} server profile(s)",
+                defaultSettings.isSpoofAsVanilla(), serverProfiles.size()
+            );
+        } catch (IOException e) {
+            Opsec.LOGGER.error(
+                "[OpSec] Failed to read config file: {}",
+                e.getMessage()
+            );
+            resetToDefaults();
+            save();
+        } catch (
+            com.google.gson.JsonSyntaxException
+            | IllegalStateException e
+        ) {
+            Opsec.LOGGER.error(
+                "[OpSec] Invalid JSON in config file: {}",
+                e.getMessage()
+            );
+            resetToDefaults();
+            save();
+        }
+    }
+
+    /** Resets the active/default settings to fresh defaults and drops all server profiles. */
+    private void resetToDefaults() {
+        defaultSettings = new SpoofSettings();
+        settings = defaultSettings;
+        serverProfiles.clear();
+    }
+
+    /**
+     * Validates and auto-corrects settings if necessary.
+     * This method modifies invalid settings to valid defaults.
+     *
+     * @param settings The settings to validate
+     * @return true if settings were valid or have been corrected, false if settings is null
+     */
+    private boolean validateAndCorrectSettings(SpoofSettings settings) {
+        if (settings == null) {
+            Opsec.LOGGER.error("[OpSec] Validation failed: settings is null");
+            return false;
+        }
+
+        boolean modified = false;
+
+        if (settings.getSigningMode() == null) {
+            Opsec.LOGGER.warn(
+                "[OpSec] Invalid signing mode, resetting to SIGN"
+            );
+            settings.setSigningMode(SpoofSettings.SigningMode.SIGN);
+            modified = true;
+        }
+
+        if (settings.getWhitelistMode() == null) {
+            Opsec.LOGGER.warn(
+                "[OpSec] Invalid whitelist mode, resetting to AUTO"
+            );
+            settings.setWhitelistMode(SpoofSettings.WhitelistMode.AUTO);
+            modified = true;
+        }
+
+        // Spoof-as-vanilla is the master mode: it implies "block ALL custom payloads",
+        // so an active whitelist (Auto/Custom) would be moot. Force the whitelist to
+        // OFF (block all) whenever spoofAsVanilla is on. setSpoofAsVanilla normally
+        // handles the swap, but hand-edited configs can still land here inconsistent.
+        if (settings.isSpoofAsVanilla() && settings.getWhitelistMode() != SpoofSettings.WhitelistMode.OFF) {
+            Opsec.LOGGER.warn(
+                "[OpSec] active whitelist incompatible with spoofAsVanilla; forcing whitelist OFF (block all)"
+            );
+            settings.setWhitelistMode(SpoofSettings.WhitelistMode.OFF);
+            modified = true;
+        }
+
+        // Block-All is no longer user-selectable: when spoof-vanilla is off, migrate
+        // any leftover OFF mode (from older configs that exposed it as a tri-state)
+        // back to AUTO so the user isn't stuck in an unreachable state.
+        if (!settings.isSpoofAsVanilla() && settings.getWhitelistMode() == SpoofSettings.WhitelistMode.OFF) {
+            Opsec.LOGGER.info(
+                "[OpSec] Migrating legacy whitelist OFF (block all) to AUTO — option is no longer user-selectable"
+            );
+            settings.setWhitelistMode(SpoofSettings.WhitelistMode.AUTO);
+            modified = true;
+        }
+
+        if (modified) {
+            save();
+        }
+
+        return true;
+    }
+
+    public void save() {
+        try {
+            JsonObject json = new JsonObject();
+            // Always serialize defaultSettings here, not the currently-active `settings` —
+            // while a per-server profile is active, `settings` points at the profile
+            // object, and saving that into the global "settings" key would leak
+            // server-specific values into the defaults every other server sees.
+            json.add("settings", defaultSettings.toJson());
+
+            JsonObject profilesJson = new JsonObject();
+            for (Map.Entry<String, SpoofSettings> entry : serverProfiles.entrySet()) {
+                profilesJson.add(entry.getKey(), entry.getValue().toJson());
+            }
+            json.add("serverProfiles", profilesJson);
+
+            Files.createDirectories(CONFIG_PATH.getParent());
+
+            Path tempFile = CONFIG_PATH.resolveSibling(
+                CONFIG_PATH.getFileName() + ".tmp"
+            );
+            Files.writeString(tempFile, GSON.toJson(json));
+            Files.move(
+                tempFile,
+                CONFIG_PATH,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE
+            );
+        } catch (IOException e) {
+            Opsec.LOGGER.error(
+                "[OpSec] Failed to save config to {}: {}",
+                CONFIG_PATH,
+                e.getMessage()
+            );
+        }
+        // Null-guard avoids constructor's save→getInstance recursion; OpsecClient seeds the first build.
+        if (INSTANCE != null) {
+            ModRegistry.rebuildDependencyClosure();
+        }
+    }
+
+    public SpoofSettings getSettings() {
+        return settings;
+    }
+
+    /**
+     * Records the active server and swaps the active {@link #settings} to that
+     * server's saved profile, if one exists (falls back to {@link #defaultSettings}
+     * otherwise). {@code server == null} means disconnected: reverts to defaults.
+     *
+     * <p>{@link #currentServer} itself keeps its pre-existing "unknown" sentinel
+     * (via {@link #normalizeAddress}) for {@link #hasServerProfile}'s cache-bucketing
+     * caller; {@link #serverConnected} is the real connected/disconnected signal.</p>
+     */
+    public void setCurrentServer(String server) {
+        this.currentServer = normalizeAddress(server);
+        this.serverConnected = server != null;
+        if (!serverConnected) {
+            this.settings = defaultSettings;
+            return;
+        }
+        SpoofSettings profile = serverProfiles.get(currentServer);
+        this.settings = profile != null ? profile : defaultSettings;
+    }
+
+    public String getCurrentServer() {
+        return currentServer;
+    }
+
+    /** True while actually connected to a server (as opposed to the config screen's disconnected "unknown" bucket). */
+    public boolean hasActiveServer() {
+        return serverConnected;
+    }
+
+    /** True when the currently-connected server has a saved per-server profile active. */
+    public boolean hasServerProfile() {
+        return serverConnected && serverProfiles.containsKey(currentServer);
+    }
+
+    /**
+     * Snapshots whatever settings are currently active (defaults, or an existing
+     * profile being edited further) into a new/updated profile for the connected
+     * server, and makes that snapshot the active settings going forward.
+     */
+    public void saveCurrentAsServerProfile() {
+        if (!serverConnected) return;
+        SpoofSettings profile = new SpoofSettings();
+        profile.copyFrom(this.settings);
+        serverProfiles.put(currentServer, profile);
+        this.settings = profile;
+        save();
+    }
+
+    /** Deletes the connected server's profile, if any, and reverts to global defaults. */
+    public void removeServerProfile() {
+        if (!serverConnected) return;
+        serverProfiles.remove(currentServer);
+        this.settings = defaultSettings;
+        save();
+    }
+
+    // Identity protection
+    /**
+     * Whether the brand string should be overridden to "vanilla". Only true when
+     * the user opted in via the UI toggle and ExploitPreventer isn't loaded.
+     */
+    public boolean shouldSpoofBrand() {
+        return !EXPLOIT_PREVENTER_LOADED && settings.isSpoofAsVanilla();
+    }
+
+    /**
+     * Whether channel spoofing/filtering should be active. Independent of brand —
+     * channel filtering happens whenever OpSec is in charge (i.e., EP not loaded).
+     * The filter mode (block-all vs whitelist) is chosen by isVanillaMode/
+     * isFabricMode in SpoofSettings, which read directly from spoofAsVanilla.
+     */
+    public boolean shouldSpoofChannels() {
+        return !EXPLOIT_PREVENTER_LOADED;
+    }
+
+    /** Same EP gate as {@link #shouldSpoofChannels()} — kept distinct so the two can diverge without churn. */
+    public boolean shouldSpoofKnownPacks() {
+        return !EXPLOIT_PREVENTER_LOADED;
+    }
+
+    public String getEffectiveBrand() {
+        return settings.getEffectiveBrand();
+    }
+
+    // Resource pack protection
+    public boolean shouldIsolatePackCache() {
+        return !EXPLOIT_PREVENTER_LOADED && settings.isIsolatePackCache();
+    }
+
+    public boolean shouldBlockLocalPackUrls() {
+        return !EXPLOIT_PREVENTER_LOADED && settings.isBlockLocalPackUrls();
+    }
+
+    /** Per-mod shader strip. Not EP-gated — EP lacks this defense, so OpSec keeps it active under EP. */
+    public boolean shouldStripModShaders() {
+        return settings.isStripModShaders();
+    }
+
+    /** True when any server-pack wrapping feature is active (whole-pack strip or per-mod shader strip). */
+    public boolean shouldWrapServerPacks() {
+        return shouldStripPack() || shouldStripModShaders();
+    }
+
+    // Key resolution protection
+    public boolean isTranslationProtectionEnabled() {
+        return (
+            !EXPLOIT_PREVENTER_LOADED &&
+            settings.isTranslationProtectionEnabled()
+        );
+    }
+
+    public boolean isMeteorFix() {
+        return settings.isMeteorFix();
+    }
+
+    // Bypass Server Pack Requirement
+    public SpoofSettings.StripMode getPackStripMode() {
+        return settings.getPackStripMode();
+    }
+
+    public boolean shouldStripPack() {
+        return !EXPLOIT_PREVENTER_LOADED;
+    }
+
+    /** The consent overlay prompt should show for an incoming push. */
+    public boolean shouldShowPackOverlay() {
+        return (
+            !EXPLOIT_PREVENTER_LOADED &&
+            settings.getPackStripMode() == SpoofSettings.StripMode.ASK
+        );
+    }
+
+    // Alerts and logging
+    public boolean shouldShowAlerts() {
+        return settings.isShowAlerts();
+    }
+
+    public boolean shouldShowToasts() {
+        return settings.isShowToasts();
+    }
+
+    public boolean isLogDetections() {
+        return settings.isLogDetections();
+    }
+
+    public boolean isDebugAlerts() {
+        return settings.isDebugAlerts();
+    }
+
+    // Chat signing
+    public SpoofSettings.SigningMode getSigningMode() {
+        return settings.getSigningMode();
+    }
+
+    public boolean shouldNotSign() {
+        return !CHAT_SIGNING_MANAGED_EXTERNALLY && settings.shouldNotSign();
+    }
+
+    // Privacy
+    public boolean shouldDisableTelemetry() {
+        return !TELEMETRY_MANAGED_EXTERNALLY && settings.isDisableTelemetry();
+    }
+
+    /** Whether clicking a server-sent copy-to-clipboard/run-command text should require confirmation first. */
+    public boolean shouldGuardChatLinks() {
+        return settings.isGuardChatLinks();
+    }
+
+    /**
+     * Normalizes a server address by converting to lowercase and removing default port.
+     * @param address The server address to normalize
+     * @return Normalized address or "unknown" if null
+     */
+    public static String normalizeAddress(String address) {
+        if (address == null) return "unknown";
+        String normalized = address.toLowerCase().trim();
+        if (normalized.endsWith(":25565")) {
+            normalized = normalized.substring(0, normalized.length() - 6);
+        }
+        return normalized;
+    }
+}

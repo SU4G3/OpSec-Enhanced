@@ -35,7 +35,10 @@ public final class JarIntegrityChecker {
     private static final String GITHUB_REPO = "OpSec-Enhanced";
     private static final String GITHUB_RELEASE_URL_TEMPLATE =
             "https://api.github.com/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO + "/releases/tags/V%s";
-    private static final Pattern GITHUB_ASSET_NAME_PATTERN = Pattern.compile("^opsec-(.+)\\+v(.+)\\.jar$");
+    // Groups exclude '+' so the "+v" delimiter position is unambiguous — a plain (.+)\+v(.+)
+    // is polynomial-time on adversarial input (e.g. GitHub release asset names) since the
+    // engine can backtrack across every '+' in the string looking for a split point.
+    private static final Pattern GITHUB_ASSET_NAME_PATTERN = Pattern.compile("^opsec-([^+]+)\\+v([^+]+)\\.jar$");
 
     private static final String CURSEFORGE_WIDGET_URL = "https://api.cfwidget.com/minecraft/mc-mods/" + MODRINTH_PROJECT_SLUG;
 

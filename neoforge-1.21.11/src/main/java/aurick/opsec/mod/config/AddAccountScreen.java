@@ -1,0 +1,258 @@
+package aurick.opsec.mod.config;
+
+import aurick.opsec.mod.accounts.AccountManager;
+import aurick.opsec.mod.accounts.SessionAccount;
+import aurick.opsec.mod.lang.OpsecLang;
+import aurick.opsec.mod.lang.OpsecStrings;
+import net.minecraft.client.Minecraft;
+//? if >=26.1 {
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;*/
+//?} else {
+import net.minecraft.client.gui.GuiGraphics;
+//?}
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Screen for adding a new account via session token.
+ */
+public class AddAccountScreen extends Screen {
+    
+    private final Screen parent;
+    private EditBox tokenInput;
+    private EditBox refreshTokenInput;
+    private Button addButton;
+    private Button cancelButton;
+    private Component statusMessage;
+    private boolean isValidating = false;
+    private StringWidget titleLabel;
+    private StringWidget statusLabel;
+    
+    public AddAccountScreen(Screen parent) {
+        super(OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_SESSION_TITLE));
+        this.parent = parent;
+        this.statusMessage = Component.literal("");
+    }
+    
+    @Override
+    protected void init() {
+        int centerX = this.width / 2;
+        int centerY = this.height / 2;
+        
+        // Title label - always visible (centered manually)
+        int titleWidth = this.font.width(this.title);
+        this.titleLabel = new StringWidget(centerX - titleWidth / 2, centerY - 75, titleWidth, 20, this.title, this.font);
+        this.addRenderableWidget(this.titleLabel);
+        
+        // Token input field
+        this.tokenInput = new EditBox(
+                this.font,
+                centerX - 150,
+                centerY - 50,
+                300,
+                20,
+                OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_SESSION_LABEL)
+        );
+        this.tokenInput.setMaxLength(2000);
+        this.tokenInput.setHint(OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_SESSION_HINT));
+        this.addRenderableWidget(this.tokenInput);
+
+        // Refresh token input field (optional)
+        this.refreshTokenInput = new EditBox(
+                this.font,
+                centerX - 150,
+                centerY - 20,
+                300,
+                20,
+                OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_REFRESH_LABEL)
+        );
+        this.refreshTokenInput.setMaxLength(2000);
+        this.refreshTokenInput.setHint(OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_REFRESH_HINT));
+        this.addRenderableWidget(this.refreshTokenInput);
+        
+        // Status label - updated dynamically (centered manually, width updated in render)
+        this.statusLabel = new StringWidget(centerX - 150, centerY + 45, 300, 20, Component.literal(""), this.font);
+        this.addRenderableWidget(this.statusLabel);
+        
+        // Add button
+        this.addButton = Button.builder(OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_ADD_BUTTON), button -> {
+            addAccount();
+        }).bounds(centerX - 105, centerY + 15, 100, 20).build();
+        this.addRenderableWidget(this.addButton);
+
+        // Cancel button
+        this.cancelButton = Button.builder(OpsecLang.component(OpsecStrings.ACCOUNT_SCREEN_CANCEL_BUTTON), button -> {
+            this.onClose();
+        }).bounds(centerX + 5, centerY + 15, 100, 20).build();
+        this.addRenderableWidget(this.cancelButton);
+        
+        // Focus the token input
+        this.setInitialFocus(this.tokenInput);
+    }
+    
+    private void addAccount() {
+        String token = tokenInput.getValue().trim();
+        String refreshToken = refreshTokenInput.getValue().trim();
+        
+        if (token.isEmpty()) {
+            statusMessage = OpsecLang.component(OpsecStrings.ACCOUNT_ERROR_EMPTY_TOKEN);
+            if (statusLabel != null) {
+                statusLabel.setMessage(statusMessage);
+            }
+            return;
+        }
+
+        if (isValidating) {
+            return;
+        }
+
+        isValidating = true;
+        addButton.active = false;
+        statusMessage = OpsecLang.component(OpsecStrings.ACCOUNT_STATUS_VALIDATING);
+        if (statusLabel != null) {
+            statusLabel.setMessage(statusMessage);
+        }
+        
+        // Validate in background thread
+        CompletableFuture.runAsync(() -> {
+            SessionAccount account = refreshToken.isEmpty() 
+                    ? new SessionAccount(token)
+                    : new SessionAccount(token, refreshToken);
+            boolean valid = account.fetchInfo();
+            
+            // Update UI on main thread
+            Minecraft.getInstance().execute(() -> {
+                isValidating = false;
+                addButton.active = true;
+                
+                if (valid) {
+                    // Add to account manager
+                    AccountManager.getInstance().add(account);
+                    
+                    // Login immediately
+                    if (account.login()) {
+                        AccountManager.getInstance().setActiveAccountUuid(account.getUuid());
+                    }
+                    
+                    String successMsg = OpsecLang.tr(OpsecStrings.ACCOUNT_SUCCESS_ADDED, account.getUsername());
+                    if (account.hasRefreshToken()) {
+                        successMsg += OpsecLang.tr(OpsecStrings.ACCOUNT_SUCCESS_REFRESH_SUFFIX);
+                    }
+                    statusMessage = Component.literal(successMsg);
+                    if (statusLabel != null) {
+                        statusLabel.setMessage(statusMessage);
+                    }
+
+                    // Return to config screen after short delay
+                    Minecraft.getInstance().execute(() -> {
+                        this.onClose();
+                    });
+                } else {
+                    statusMessage = OpsecLang.component(OpsecStrings.ACCOUNT_ERROR_INVALID_TOKEN);
+                    if (statusLabel != null) {
+                        statusLabel.setMessage(statusMessage);
+                    }
+                }
+            });
+        });
+    }
+    
+    //? if >=26.1 {
+    /*@Override
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+
+        // Update status label position to keep it centered
+        if (statusLabel != null && statusMessage != null && !statusMessage.getString().isEmpty()) {
+            int centerX = this.width / 2;
+            int centerY = this.height / 2;
+            int statusWidth = this.font.width(statusMessage);
+            statusLabel.setX(centerX - statusWidth / 2);
+            statusLabel.setY(centerY + 45);
+            statusLabel.setWidth(statusWidth);
+        }
+    }*/
+    //?} elif <1.21.6 && >=1.20.2 {
+    /*@Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(graphics, mouseX, mouseY, partialTick);
+        super.render(graphics, mouseX, mouseY, partialTick);
+
+        // Update status label position to keep it centered
+        if (statusLabel != null && statusMessage != null && !statusMessage.getString().isEmpty()) {
+            int centerX = this.width / 2;
+            int centerY = this.height / 2;
+            int statusWidth = this.font.width(statusMessage);
+            statusLabel.setX(centerX - statusWidth / 2);
+            statusLabel.setY(centerY + 45);
+            statusLabel.setWidth(statusWidth);
+        }
+    }*/
+    //?} elif <1.20.2 {
+    /*@Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // 1.20.1: Screen.renderBackground takes a single GuiGraphics arg.
+        this.renderBackground(graphics);
+        super.render(graphics, mouseX, mouseY, partialTick);
+
+        if (statusLabel != null && statusMessage != null && !statusMessage.getString().isEmpty()) {
+            int centerX = this.width / 2;
+            int centerY = this.height / 2;
+            int statusWidth = this.font.width(statusMessage);
+            statusLabel.setX(centerX - statusWidth / 2);
+            statusLabel.setY(centerY + 45);
+            statusLabel.setWidth(statusWidth);
+        }
+    }*/
+    //?} else {
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+
+        // Update status label position to keep it centered
+        if (statusLabel != null && statusMessage != null && !statusMessage.getString().isEmpty()) {
+            int centerX = this.width / 2;
+            int centerY = this.height / 2;
+            int statusWidth = this.font.width(statusMessage);
+            statusLabel.setX(centerX - statusWidth / 2);
+            statusLabel.setY(centerY + 45);
+            statusLabel.setWidth(statusWidth);
+        }
+    }
+    //?}
+    
+    @Override
+    public void onClose() {
+        // Get the parent's parent (the screen before OpsecConfigScreen)
+        Screen grandParent = null;
+        if (parent instanceof OpsecConfigScreen configScreen) {
+            grandParent = configScreen.getParent();
+        }
+        // Create a fresh config screen with the Accounts tab selected (index 3)
+        //? if >=26.2 {
+        /*this.minecraft.setScreenAndShow(new OpsecConfigScreen(grandParent, 3, 0));*/
+        //?} else if >=1.21.6 {
+        this.minecraft.setScreen(new OpsecConfigScreen(grandParent, 3, 0));
+        //?} else {
+        /*this.minecraft.setScreen(new OpsecConfigScreen(grandParent, 3));*/
+        //?}
+    }
+    
+    // keyPressed signature changed in 1.21.9 to use KeyEvent
+    //? if <1.21.9 {
+    /*@Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Enter key to submit
+        if (keyCode == 257 && !isValidating) { // GLFW_KEY_ENTER
+            addAccount();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+    *///?}
+}

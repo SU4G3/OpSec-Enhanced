@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.At;
 public class PacketUtilsMixin {
 
     @WrapOperation(
-        method = "method_11072",
+        method = "lambda$ensureRunningOnSameThread$0",
         at = @At(value = "INVOKE",
             target = "Lnet/minecraft/network/protocol/Packet;handle(Lnet/minecraft/network/PacketListener;)V")
     )

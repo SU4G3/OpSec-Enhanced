@@ -47,7 +47,6 @@ public class OpsecClient {
 
         OpsecConfig.getInstance();
         OpsecCommand.register();
-        AccountManager.getInstance(); // Load saved accounts
         OpsecHud.register();
 
         if (OpsecConfig.getInstance().getSettings().isIntegrityCheckEnabled()) {
@@ -70,6 +69,9 @@ public class OpsecClient {
             // here (ModRegistry.inferJijNamespaceAliases / scanRegisteredChannels) to
             // drive Mod Whitelist's AUTO mode. Not ported — see the class javadoc.
             Opsec.LOGGER.debug("[OpSec] First client tick reached");
+            // Deferred from the constructor: AccountManager.captureOriginalAccount() needs
+            // Minecraft.getInstance() non-null, which mod construction runs before.
+            AccountManager.getInstance();
         }
 
         PackStripOverlay.tryShowNext(net.minecraft.client.Minecraft.getInstance());

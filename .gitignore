@@ -25,6 +25,16 @@ remappedSrc/
 versions/*/build/
 versions/*/.gradle/
 
+# NeoForge subprojects
+neoforge/build/
+neoforge/.gradle/
+neoforge/run/
+neoforge/runs/
+neoforge-*/build/
+neoforge-*/.gradle/
+neoforge-*/run/
+neoforge-*/runs/
+
 # Legacy directories (no longer used)
 legacy/
 modern/

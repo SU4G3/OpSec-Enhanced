@@ -1,0 +1,98 @@
+package aurick.opsec.mod.mixin.client;
+
+//? if >=1.20.3 {
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.sugar.Local;
+import aurick.opsec.mod.Opsec;
+import aurick.opsec.mod.config.OpsecConfig;
+import net.minecraft.client.Minecraft;
+import net.minecraft.server.packs.DownloadQueue;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.UUID;
+
+/**
+ * Isolates resource pack cache per-account to prevent cross-account fingerprinting.
+ *
+ * <p>This prevents servers from tracking users across accounts by storing downloaded
+ * resource packs in account-specific subdirectories instead of a shared cache.</p>
+ *
+ * <p>Adapted from <a href="https://github.com/CCBlueX/LiquidBounce">LiquidBounce</a></p>
+ * Copyright (c) 2015 - 2025 CCBlueX
+ *
+ * @author Izuna
+ * @see <a href="https://github.com/CCBlueX/LiquidBounce/blob/nextgen/src/main/java/net/ccbluex/liquidbounce/injection/mixins/minecraft/util/MixinDownloadQueue.java">MixinDownloadQueue.java</a>
+ */
+@Mixin(DownloadQueue.class)
+public class DownloadQueueMixin {
+    @Shadow
+    @Final
+    private Path cacheDir;
+
+    @SuppressWarnings("UnresolvedMixinReference")
+    @ModifyExpressionValue(
+        method = {"lambda$runDownload$0", "method_55485"},
+        at = @At(value = "INVOKE", target = "Ljava/nio/file/Path;resolve(Ljava/lang/String;)Ljava/nio/file/Path;"),
+        require = 0)
+    private Path opsec$isolatePackPath(Path original, @Local(argsOnly = true) UUID packId) {
+        if (!OpsecConfig.getInstance().shouldIsolatePackCache()) {
+            return original;
+        }
+
+        // Check if path has already been modified by another mod (e.g., LiquidBounce, Meteor)
+        if (!original.getParent().equals(cacheDir)) {
+            return original;
+        }
+
+        UUID accountId = Minecraft.getInstance().getUser().getProfileId();
+        if (accountId == null) {
+            Opsec.LOGGER.warn("[OpSec] Failed to isolate resource pack cache - account UUID is null");
+            return original;
+        }
+
+        // The server chooses `packId` itself (it's the push's own transaction UUID, not a
+        // hash of the pack's content) — two colluding servers can agree on the SAME packId
+        // ahead of time and both push it. Without a per-server bucket, the second server
+        // would find the first server's isolated folder already populated and could infer
+        // "this account already has this exact packId cached" purely from download timing,
+        // deanonymizing a returning player across two otherwise-unrelated servers even though
+        // they never share an account. Bucketing by server address closes that: a shared
+        // packId only collides for the same account AND the same server.
+        String serverBucket = opsec$serverBucket();
+        Path isolatedPath = cacheDir.resolve(accountId.toString()).resolve(serverBucket).resolve(packId.toString());
+        Opsec.LOGGER.debug("[OpSec] Isolating resource pack cache for account {} / server {} -> {}", accountId, serverBucket, isolatedPath);
+        return isolatedPath;
+    }
+
+    private static String opsec$serverBucket() {
+        String server = OpsecConfig.getInstance().getCurrentServer();
+        if (server == null || server.isBlank()) return "unknown";
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(server.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash, 0, 8); // 16 hex chars — plenty to avoid collisions, short for a path segment
+        } catch (Exception e) {
+            Opsec.LOGGER.debug("[OpSec] Failed to hash server address for cache bucketing: {}", e.getMessage());
+            return "unknown";
+        }
+    }
+}
+//?} else {
+/*
+import net.minecraft.network.protocol.PacketUtils;
+import org.spongepowered.asm.mixin.Mixin;
+
+// 1.20.1/1.20.2: DownloadQueue class doesn't exist (introduced 1.20.3 with the
+// multi-pack rewrite). Per-account isolated pack cache on this era is handled
+// by HttpUtilMixin path redirection in the legacy server-resource-packs flow.
+@Mixin(PacketUtils.class)
+public class DownloadQueueMixin {
+}
+*///?}

@@ -7,9 +7,8 @@ import aurick.opsec.mod.config.SpoofSettings;
 import aurick.opsec.mod.lang.OpsecLang;
 import aurick.opsec.mod.lang.OpsecStrings;
 import aurick.opsec.mod.util.KeybindDefaults;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
-import net.fabricmc.loader.api.metadata.ModDependency;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforgespi.language.IModInfo;
 //? if >=1.21.11 {
 /*import net.minecraft.resources.Identifier;
 */
@@ -81,7 +80,7 @@ public class ModRegistry {
 
     /** Platform mods skipped during dep walks — their presence is implied by the loader/brand. */
     public static final Set<String> PLATFORM_MODS =
-        Set.of("minecraft", "java", "fabricloader");
+        Set.of("minecraft", "java", "neoforge");
 
     /** Real-vanilla {@code KnownPack} namespace ({@code KnownPack.VANILLA_NAMESPACE}). Never strip these. */
     private static final String VANILLA_PACK_NAMESPACE = "minecraft";
@@ -198,9 +197,9 @@ public class ModRegistry {
      * Resolve display name from Fabric mod metadata.
      */
     private static String resolveDisplayName(String modId) {
-        Optional<ModContainer> container =
-            FabricLoader.getInstance().getModContainer(modId);
-        return container.map(c -> c.getMetadata().getName()).orElse(modId);
+        Optional<IModInfo> container =
+            aurick.opsec.mod.util.NeoCompat.getModInfo(modId);
+        return container.map(c -> c.getDisplayName()).orElse(modId);
     }
 
     // ==================== TRANSLATION KEY TRACKING ====================
@@ -392,8 +391,8 @@ public class ModRegistry {
 
     public static String getModDisplayName(String modId) {
         if (modId == null) return null;
-        return FabricLoader.getInstance().getModContainer(modId)
-            .map(c -> c.getMetadata().getName()).orElse(modId);
+        return aurick.opsec.mod.util.NeoCompat.getModInfo(modId)
+            .map(c -> c.getDisplayName()).orElse(modId);
     }
 
     /** Display name of the requiring mod, with a localized fallback for unattributed entries. */
@@ -404,11 +403,14 @@ public class ModRegistry {
             : OpsecLang.tr(OpsecStrings.WHITELIST_REQUIRING_FALLBACK);
     }
 
-    public static Collection<? extends ModContainer> getContainedMods(String modId) {
-        if (modId == null) return List.of();
-        return FabricLoader.getInstance().getModContainer(modId)
-            .map(ModContainer::getContainedMods)
-            .orElseGet(List::of);
+    /**
+     * NeoForge has no equivalent of Fabric's Jar-in-Jar "contained mods" concept at the
+     * {@code IModInfo} level — a JarJar'd nested mod shows up as its own independent
+     * top-level {@code ModList} entry instead of a child of its host. Always empty here;
+     * every caller already treats "no children" as a valid, if less granular, answer.
+     */
+    public static Collection<? extends IModInfo> getContainedMods(String modId) {
+        return List.of();
     }
 
     /** Trackable-content counts including JIJ descendants — meta jars (e.g. fabric-api) need this to register as "has content". */
@@ -429,8 +431,8 @@ public class ModRegistry {
             sh = info.getShaders().size();
         }
         int kp = getKnownPackStrings(modId).size();
-        for (ModContainer child : getContainedMods(modId)) {
-            ContentCounts sub = aggregateContent(child.getMetadata().getId());
+        for (IModInfo child : getContainedMods(modId)) {
+            ContentCounts sub = aggregateContent(child.getModId());
             tk += sub.translationKeys();
             kb += sub.keybinds();
             ch += sub.channels();
@@ -487,8 +489,8 @@ public class ModRegistry {
 
     private static void aggregateKnownPacksRecursive(String modId, List<String> out) {
         out.addAll(getKnownPackStrings(modId));
-        for (ModContainer child : getContainedMods(modId)) {
-            aggregateKnownPacksRecursive(child.getMetadata().getId(), out);
+        for (IModInfo child : getContainedMods(modId)) {
+            aggregateKnownPacksRecursive(child.getModId(), out);
         }
     }
 
@@ -496,8 +498,8 @@ public class ModRegistry {
         if (modId == null) return;
         ModInfo info = registry.get(modId);
         if (info != null) sink.accept(info);
-        for (ModContainer child : getContainedMods(modId)) {
-            aggregateRecursive(child.getMetadata().getId(), sink);
+        for (IModInfo child : getContainedMods(modId)) {
+            aggregateRecursive(child.getModId(), sink);
         }
     }
 
@@ -541,8 +543,8 @@ public class ModRegistry {
         builtinPackIds.computeIfAbsent(registeringModId, k -> ConcurrentHashMap.newKeySet())
                 .add(packIdToString);
         // Mirror to the reverse index for any registrations that arrive after the eager indexer ran.
-        FabricLoader.getInstance().getModContainer(registeringModId).ifPresent(c -> {
-            String version = c.getMetadata().getVersion().getFriendlyString();
+        aurick.opsec.mod.util.NeoCompat.getModInfo(registeringModId).ifPresent(c -> {
+            String version = c.getVersion().toString();
             knownPackToModId.put(formatKnownPackTriple(packIdToString, version), registeringModId);
         });
     }
@@ -555,10 +557,10 @@ public class ModRegistry {
     public static List<String> getKnownPackStrings(String modId) {
         if (modId == null) return List.of();
         if (!KNOWN_PACKS_HOOK_PRESENT) return List.of();
-        Optional<ModContainer> opt = FabricLoader.getInstance().getModContainer(modId);
+        Optional<IModInfo> opt = aurick.opsec.mod.util.NeoCompat.getModInfo(modId);
         if (opt.isEmpty()) return List.of();
-        ModContainer container = opt.get();
-        if ("builtin".equals(container.getMetadata().getType())) return List.of();
+        IModInfo container = opt.get();
+        if (PLATFORM_MODS.contains(container.getModId())) return List.of();
 
         List<String> out = new java.util.ArrayList<>();
         collectKnownPackTriples(container, out::add);
@@ -566,9 +568,9 @@ public class ModRegistry {
     }
 
     /** Single source of truth for the triple shape — display and indexer share this so they can't drift. */
-    private static void collectKnownPackTriples(ModContainer container, java.util.function.Consumer<String> sink) {
-        String modId = container.getMetadata().getId();
-        String version = container.getMetadata().getVersion().getFriendlyString();
+    private static void collectKnownPackTriples(IModInfo container, java.util.function.Consumer<String> sink) {
+        String modId = container.getModId();
+        String version = container.getVersion().toString();
 
         if (hasServerDataContent(container)) {
             sink.accept(formatKnownPackTriple(modId, version));
@@ -589,9 +591,9 @@ public class ModRegistry {
     /** Populates {@link #knownPackToModId}. Call once at client start. No-op when the Fabric hook is absent. */
     public static void indexKnownPackOwners() {
         if (!KNOWN_PACKS_HOOK_PRESENT) return;
-        for (ModContainer container : FabricLoader.getInstance().getAllMods()) {
-            if ("builtin".equals(container.getMetadata().getType())) continue;
-            String modId = container.getMetadata().getId();
+        for (IModInfo container : ModList.get().getMods()) {
+            if (PLATFORM_MODS.contains(container.getModId())) continue;
+            String modId = container.getModId();
             collectKnownPackTriples(container, triple -> knownPackToModId.put(triple, modId));
         }
         Opsec.LOGGER.debug("[OpSec] Indexed {} known-pack triples across all mods", knownPackToModId.size());
@@ -618,14 +620,14 @@ public class ModRegistry {
      * {@code ModNioPackResources.readNamespaces(...).get(SERVER_DATA).isEmpty()}
      * check that gates known-packs participation.
      */
-    private static boolean hasServerDataContent(ModContainer container) {
+    private static boolean hasServerDataContent(IModInfo container) {
         return serverDataContentCache.computeIfAbsent(
-                container.getMetadata().getId(),
+                container.getModId(),
                 id -> computeServerDataContent(container));
     }
 
-    private static boolean computeServerDataContent(ModContainer container) {
-        for (java.nio.file.Path root : container.getRootPaths()) {
+    private static boolean computeServerDataContent(IModInfo container) {
+        for (java.nio.file.Path root : List.of(container.getOwningFile().getFile().getSecureJar().getRootPath())) {
             java.nio.file.Path dataDir = root.resolve("data");
             if (!java.nio.file.Files.isDirectory(dataDir)) continue;
             try (var stream = java.nio.file.Files.list(dataDir)) {
@@ -639,40 +641,35 @@ public class ModRegistry {
 
     private static void walkDependencies(String seedRoot, String modId, Set<String> closure, Map<String, String> providers) {
         if (modId == null || PLATFORM_MODS.contains(modId)) return;
-        Optional<ModContainer> container =
-            FabricLoader.getInstance().getModContainer(modId);
+        Optional<IModInfo> container =
+            aurick.opsec.mod.util.NeoCompat.getModInfo(modId);
         if (container.isEmpty()) return;
-        String canonicalId = container.get().getMetadata().getId();
+        String canonicalId = container.get().getModId();
         if (PLATFORM_MODS.contains(canonicalId)) return;
         if (!closure.add(canonicalId)) return;
-        // ModInfo entries are keyed by namespace, which may be a "provides" alias rather than canonical id.
-        for (String alias : container.get().getMetadata().getProvides()) {
-            closure.add(alias);
-            if (!alias.equals(seedRoot)) providers.putIfAbsent(alias, seedRoot);
-        }
+        // NeoForge's IModInfo has no equivalent of Fabric's "provides" (alternate mod ID)
+        // metadata — skipped; a mod declaring alternate IDs is rare and this only means
+        // the closure walk won't also add those aliases.
         if (!canonicalId.equals(seedRoot)) providers.putIfAbsent(canonicalId, seedRoot);
 
-        for (ModContainer contained : container.get().getContainedMods()) {
-            walkDependencies(seedRoot, contained.getMetadata().getId(), closure, providers);
+        // No JarJar "contained mods" walk either — see getContainedMods()'s javadoc.
+        for (IModInfo contained : getContainedMods(canonicalId)) {
+            walkDependencies(seedRoot, contained.getModId(), closure, providers);
         }
-        for (ModDependency dep : container.get().getMetadata().getDependencies()) {
-            if (dep.getKind() != ModDependency.Kind.DEPENDS) continue;
+        for (IModInfo.ModVersion dep : container.get().getDependencies()) {
+            if (dep.getType() != IModInfo.DependencyType.REQUIRED) continue;
             walkDependencies(seedRoot, dep.getModId(), closure, providers);
         }
     }
 
-    /** Walk a seed's JIJ host chain so co-shipped siblings of a tracked JIJ child also land in the closure. */
+    /**
+     * Walk a seed's JarJar host chain so co-shipped siblings of a tracked nested mod also
+     * land in the closure. No-op on NeoForge — {@code IModInfo} has no "containing mod"
+     * concept (a JarJar'd mod is just its own independent {@code ModList} entry), so
+     * there's no host to walk up to.
+     */
     private static void walkUpToJijHost(String originalSeed, Set<String> closure, Map<String, String> providers) {
-        Optional<ModContainer> current = FabricLoader.getInstance().getModContainer(originalSeed);
-        while (current.isPresent()) {
-            Optional<ModContainer> host = current.get().getContainingMod();
-            if (host.isEmpty()) break;
-            String hostId = host.get().getMetadata().getId();
-            // Host attributed to the seed; siblings get attributed to the host via the descending walk.
-            providers.putIfAbsent(hostId, originalSeed);
-            walkDependencies(hostId, hostId, closure, providers);
-            current = host;
-        }
+        // Intentionally empty — see javadoc.
     }
 
     // ==================== AUTO MODE HELPER ====================
@@ -713,12 +710,11 @@ public class ModRegistry {
         if (namespace == null) return null;
         String owner = shaderOwnerByNamespace.computeIfAbsent(namespace, ns -> {
             String rel = "assets/" + ns + "/shaders";
-            for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
-                String id = mod.getMetadata().getId();
+            for (IModInfo mod : ModList.get().getMods()) {
+                String id = mod.getModId();
                 if (PLATFORM_MODS.contains(id)) continue;
-                for (java.nio.file.Path root : mod.getRootPaths()) {
-                    if (java.nio.file.Files.exists(root.resolve(rel))) return id;
-                }
+                java.nio.file.Path root = mod.getOwningFile().getFile().getSecureJar().getRootPath();
+                if (java.nio.file.Files.exists(root.resolve(rel))) return id;
             }
             return "";
         });
@@ -894,9 +890,9 @@ public class ModRegistry {
         if (namespace == null) return Set.of();
 
         // Canonicalize provides aliases (e.g. "fabric" → "fabric-api") via container metadata.
-        var container = FabricLoader.getInstance().getModContainer(namespace);
+        var container = aurick.opsec.mod.util.NeoCompat.getModInfo(namespace);
         if (container.isPresent()) {
-            return Set.of(container.get().getMetadata().getId());
+            return Set.of(container.get().getModId());
         }
 
         // Check cached namespace-to-modId mappings
@@ -949,8 +945,8 @@ public class ModRegistry {
     public static String resolveModForMinecraftChannelPath(String path) {
         if (path == null || path.isEmpty()) return null;
         String best = null;
-        for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
-            String id = mod.getMetadata().getId();
+        for (IModInfo mod : ModList.get().getMods()) {
+            String id = mod.getModId();
             if (id.length() < MIN_MOD_ID_LEN_FOR_PATH_ATTRIBUTION) continue;
             // path begins with the mod id, ending at a token boundary (end-of-string or _ / . -).
             boolean match = path.startsWith(id)
@@ -972,31 +968,10 @@ public class ModRegistry {
      * they end up as an orphan {@code ModInfo} keyed by the bare namespace.
      */
     public static void inferJijNamespaceAliases() {
-        for (ModContainer top : FabricLoader.getInstance().getAllMods()) {
-            if (top.getContainingMod().isPresent()) continue;
-            String topId = top.getMetadata().getId();
-            if (PLATFORM_MODS.contains(topId)) continue;
-
-            Map<String, Integer> prefixCounts = new java.util.HashMap<>();
-            for (ModContainer child : top.getContainedMods()) {
-                String childId = child.getMetadata().getId();
-                int dash = childId.indexOf('-');
-                if (dash > 0) {
-                    prefixCounts.merge(childId.substring(0, dash), 1, Integer::sum);
-                }
-            }
-            for (Map.Entry<String, Integer> e : prefixCounts.entrySet()) {
-                String prefix = e.getKey();
-                // Structural guard: only treat the prefix as the umbrella's own namespace
-                // when it's also a prefix of the umbrella's id — prevents two unrelated
-                // umbrellas with `common-*` children from racing to claim "common".
-                if (e.getValue() >= MIN_CHILDREN_FOR_PREFIX_ALIAS
-                        && topId.startsWith(prefix)
-                        && !FabricLoader.getInstance().getModContainer(prefix).isPresent()) {
-                    recordNamespaceMapping(prefix, topId);
-                }
-            }
-        }
+        // No-op on NeoForge: this heuristic depends entirely on Fabric's JarJar
+        // parent/child tree (getContainingMod/getContainedMods), which has no
+        // equivalent here — every JarJar'd mod is already its own top-level
+        // ModList entry, so there's no umbrella structure left to infer from.
     }
 
     private static final int MIN_CHILDREN_FOR_PREFIX_ALIAS = 2;
@@ -1063,6 +1038,14 @@ public class ModRegistry {
 
         OpsecConfig config = OpsecConfig.getInstance();
         SpoofSettings settings = config.getSettings();
+
+        // NeoForge's own loader channels (configuration-phase handshake, etc.) are sent by
+        // the client itself, not a server-controlled add-on — blocking them stalls the
+        // NeoForge handshake the server is waiting on, hanging every world join (SP and MP
+        // alike, since the integrated server runs the same handshake).
+        if ("neoforge".equals(namespace)) {
+            return true;
+        }
 
         // Vanilla minecraft: channels always pass; masquerading ones gate on their owner's
         // whitelist (tracked ownership, else by path). Unattributable ⇒ blocked.

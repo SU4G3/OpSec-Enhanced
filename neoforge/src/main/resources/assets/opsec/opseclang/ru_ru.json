@@ -28,7 +28,7 @@
   "opsec.option.spoofAsVanilla.tooltip": "Вкл: включает спуфинг клиента - выберите ниже, под кого маскироваться, и блокирует ВСЕ остальные моды от обнаружения\nВыкл: рекламирует настоящий бренд Fabric и опционально разрешает некоторые моды",
   "opsec.option.brandOverride": "Маскироваться под",
   "opsec.brandOverride.vanilla": "§aVanilla",
-  "opsec.brandOverride.vanilla.tooltip": "Рекламировать обычный бренд 'vanilla'. Всегда достоверно, всегда принимается любым сервером, допускающим vanilla-клиентов.",
+  "opsec.brandOverride.vanilla.tooltip": "Маскироваться под обычный клиент 'vanilla'. Всегда достоверно, всегда принимается любым сервером, допускающим vanilla-клиентов.",
   "opsec.brandOverride.lunar": "§bLunar Client",
   "opsec.brandOverride.lunar.tooltip": "Маскироваться под Lunar Client (строка бренда + отсутствие каналов модов, как у настоящего Lunar в vanilla-режиме). Не эмулирует проприетарный протокол косметики Lunar, поэтому сервер, специально проверяющий его, всё равно может заметить подмену. Помогает только на серверах, которые допускают 'lunarclient', но отклоняют обычный vanilla - редкая настройка. Суффикс версии можно обновлять, редактируя 'lunarVersionSuffix' в opsec.json.",
   "opsec.brandOverride.badlion": "§dBadlion Client",

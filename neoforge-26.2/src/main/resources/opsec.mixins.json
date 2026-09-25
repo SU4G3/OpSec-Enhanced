@@ -1,0 +1,51 @@
+{
+	"required": true,
+	"package": "aurick.opsec.mod.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"ClientBrandRetrieverMixin",
+		"ClientConnectionMixin",
+		"ClientPacketListenerMixin",
+		"ClientCommonPacketListenerImplMixin",
+		"ConnectScreenMixin",
+		"DownloadQueueMixin",
+		"DownloadedPackSourceMixin",
+		"DownloadedPackSourceAccessor",
+		"LegacyDownloadedPackSourceMixin",
+		"PackRepositoryMixin",
+		"PackSelectionModelMixin",
+		"PackSelectionModelEntryBaseMixin",
+		"ChannelRegistrationMixin",
+		"JoinMultiplayerScreenMixin",
+		"MinecraftAccessor",
+		"MinecraftMixin",
+		"YggdrasilUserApiServiceMixin",
+		"ChatOptionsScreenMixin",
+		"ServerboundChatPacketMixin",
+		"HttpUtilMixin",
+		"ClientLanguageAccessor",
+		"ClientLanguageMixin",
+		"DeprecatedTranslationsInfoMixin",
+		"KnownPacksManagerMixin",
+		"KeybindContentsMixin",
+		"TranslatableContentsMixin",
+		"ComponentSerializationMixin",
+		"PacketDecoderMixin",
+		"PacketProcessorMixin",
+		"PacketUtilsMixin",
+		"TabNavigationBarMixin",
+		"TitleScreenMixin",
+		"ChatClickGuardMixin",
+		"ServerboundClientInformationPacketMixin",
+		"CrashReportMixin",
+		"ServerStatusPingerMixin",
+		"CommandHistoryMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"conformVisibility": true
+	},
+	"verbose": false
+}

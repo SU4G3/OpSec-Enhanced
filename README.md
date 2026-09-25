@@ -4,7 +4,7 @@
 <h1 align="center">OpSec Enhanced</h1>
 
 
-<p align="center">A client-side Minecraft mod that provides protection against client fingerprinting, tracking exploits, and other privacy focused features.</p>
+<p align="center">A client-side Minecraft mod (Fabric & NeoForge) that provides protection against client fingerprinting, tracking exploits, and other privacy focused features.</p>
 
 <p align="center">
 <a href="https://modrinth.com/mod/opsec-enhanced"><img alt="Modrinth" src="https://img.shields.io/badge/Modrinth-Under%20Review-00AF5C?logo=modrinth&logoColor=white"></a>
@@ -58,17 +58,27 @@
 
 ## Requirements
 
-- **Minecraft** 1.20 – 26.3
+**Fabric** (all features, 1.20 – 26.3):
 - **Fabric Loader** 0.16.0+ (0.18.5+ for MC 26.1.x)
 - **Fabric API** (matching your Minecraft version)
 
+**NeoForge** (1.21.1, 1.21.11, 26.2 — see [Known Issues](#known-issues) for the one feature gap):
+- **NeoForge** matching your Minecraft version — no other dependency needed
+
 ### Installation
 
+**Fabric:**
 1. Install [Fabric Loader](https://fabricmc.net/use/) for your Minecraft version
 2. Download the latest [Fabric API](https://modrinth.com/mod/fabric-api) for your Minecraft version
 3. Download the latest `opsec-[minecraft_version]+[version].jar` from [Modrinth](https://modrinth.com/mod/opsec-enhanced) or the [Releases](https://github.com/SU4G3/OpSec-Enhanced/releases/) page
 4. Place both mods in your `.minecraft/mods` folder
 5. Launch Minecraft
+
+**NeoForge:**
+1. Install [NeoForge](https://neoforged.net/) for your Minecraft version (1.21.1, 1.21.11, or 26.2)
+2. Download the latest `opsec-neoforge-[minecraft_version]+[version].jar` from [CurseForge](https://www.curseforge.com/minecraft/mc-mods/opsec-enhanced) or the [Releases](https://github.com/SU4G3/OpSec-Enhanced/releases/) page
+3. Place it in your `.minecraft/mods` folder
+4. Launch Minecraft
 
 ## Configurations
 
@@ -156,6 +166,7 @@ The `/opsec` command is **off by default** (enable it in Misc → Debug Command)
 
 ## Known Issues
 
+- **NeoForge builds don't offer Mod Whitelist's AUTO mode** — NeoForge has no equivalent to Fabric's global network-channel registry, so there's no way to scan installed mods for "has a server channel" the way AUTO mode does on Fabric. Use **BLOCK ALL** or **CUSTOM** instead; every other protection feature works the same as Fabric. NeoForge builds are also newer and less battle-tested overall — please report issues.
 - **HUD Indicator on 26.1+ is less battle-tested** than on 1.20.1-1.21.11 (which renders via a direct Mixin). See the [Miscellaneous Tab](#miscellaneous-tab) table above.
 - **On 26.3 specifically**, two features are scaled back rather than shipped as an unverified guess, since MC 26.3 changed a lot at once (authlib 9.x→10.x, GLFW→SDL windowing, and a resource-pack composition rework):
   - **Bypass Server Pack Requirement / Strip Mod Shader Overrides don't apply.** 26.3 replaced how server packs are opened internally (`openPrimary`/`openFull` → `openMetadata`/`openResources` returning a `Stream<PackResources>`) — a real architecture change, not a signature tweak, and not something to wrap correctly on a guess without a server actually pushing a pack to test against. Every other protection feature is unaffected.
@@ -425,6 +436,9 @@ When the whitelist is active (AUTO or CUSTOM), [Client Spoofer](#client-spoofer)
 > [!NOTE]
 > CUSTOM mode lists every installed mod so any mod can be whitelisted; AUTO mode only shows mods that register network channels.
 
+> [!NOTE]
+> **AUTO mode is Fabric-only.** NeoForge builds only offer BLOCK ALL and CUSTOM — see [Known Issues](#known-issues).
+
 ---
 
 ### Chat Signing Control
@@ -530,6 +544,22 @@ Output JARs are located in `versions/<minecraft_version>/build/libs/`:
 | 26.2 | 26.2 |
 | 26.3 | 26.3 |
 
+### Building the NeoForge Mod
+
+NeoForge builds are separate Gradle projects (`neoforge/`, `neoforge-1.21.11/`, `neoforge-26.2/`), not part of the Stonecutter multi-version setup above.
+
+```bash
+cd neoforge          # MC 1.21.1
+./gradlew build
+
+cd ../neoforge-1.21.11
+./gradlew build
+
+cd ../neoforge-26.2
+./gradlew build
+```
+
+Each outputs `opsec-[version].jar` in its own `build/libs/`. NeoGradle requires Java 21 regardless of which Java runs the root Fabric build.
 
 ## References
 

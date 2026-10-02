@@ -42,7 +42,7 @@ public abstract class JoinMultiplayerScreenMixin extends Screen {
     @Inject(method = "init", at = @At("TAIL"))
     private void opsec$addSettingsButton(CallbackInfo ci) {
         this.opsec$settingsButton = Button.builder(
-            Component.literal(OpsecConfig.getInstance().getSettings().getAccentColor().code() + "OpSec"),
+            Component.literal(OpsecConfig.getInstance().getSettings().getEffectiveAccentColor().code() + "OpSec"),
             button -> {
                 if (this.minecraft != null) {
                     //? if >=26.2 {

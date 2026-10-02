@@ -83,8 +83,13 @@ public class ModRegistry {
 
     /** Real-vanilla {@code KnownPack} namespace ({@code KnownPack.VANILLA_NAMESPACE}). Never strip these. */
     private static final String VANILLA_PACK_NAMESPACE = "minecraft";
-    /** Fabric mod-pack namespace — Fabric's confusingly-named {@code ModResourcePackCreator.VANILLA} constant. */
-    private static final String FABRIC_PACK_NAMESPACE = "vanilla";
+    /**
+     * NeoForge's per-mod known-pack namespace — confirmed by decompiling
+     * {@code ResourcePackLoader.packFinder}, which constructs each mod's data pack as
+     * {@code new KnownPack("neoforge", <modid(s)>, <version(s)>)}. Not "vanilla" like
+     * Fabric's {@code ModResourcePackCreator.VANILLA} — a different loader, different scheme.
+     */
+    private static final String FABRIC_PACK_NAMESPACE = "neoforge";
 
     /** Min mod-id length for {@code minecraft:}-channel path attribution (avoids spurious short matches). */
     private static final int MIN_MOD_ID_LEN_FOR_PATH_ATTRIBUTION = 3;
@@ -509,24 +514,11 @@ public class ModRegistry {
     private static final Map<String, String> knownPackToModId = new ConcurrentHashMap<>();
 
     /**
-     * True iff Fabric's modded known-packs machinery is on the classpath.
-     * Probes {@code ModPackResourcesUtil} (the impl class) rather than
-     * {@code KnownPacksManagerMixin} itself — Sponge Mixin's classloader
-     * rejects {@code Class.forName} on registered mixin classes with
-     * {@code IllegalClassLoadError}. Both ship together in
-     * fabric-resource-loader-v1 from MC 1.21.11.
+     * NeoForge's known-packs machinery ({@code ResourcePackLoader}, {@code KnownPack}) is
+     * core, always on the classpath — unlike Fabric's optional fabric-resource-loader-v1
+     * module, there's nothing to probe for.
      */
-    private static final boolean KNOWN_PACKS_HOOK_PRESENT = probeKnownPacksHook();
-
-    private static boolean probeKnownPacksHook() {
-        try {
-            Class.forName("net.fabricmc.fabric.impl.resource.pack.ModPackResourcesUtil",
-                    false, ModRegistry.class.getClassLoader());
-            return true;
-        } catch (Throwable t) {
-            return false;
-        }
-    }
+    private static final boolean KNOWN_PACKS_HOOK_PRESENT = true;
 
     /** @return whether mod packs would actually be exposed in the known-packs handshake on this client. */
     public static boolean isKnownPacksHookPresent() {

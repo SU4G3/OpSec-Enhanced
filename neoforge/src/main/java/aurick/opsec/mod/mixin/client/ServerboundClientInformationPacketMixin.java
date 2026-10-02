@@ -56,8 +56,8 @@ public abstract class ServerboundClientInformationPacketMixin {
     @Inject(method = "<init>(Lnet/minecraft/server/level/ClientInformation;)V", at = @At("TAIL"))
     private void opsec$normalize(ClientInformation information, CallbackInfo ci) {
         if (OpsecConfig.getInstance().getSettings().isNormalizeClientInfo()) {
-            this.information = new ClientInformation("en_us", 10, ChatVisiblity.FULL, true,
-                    0x7F, HumanoidArm.RIGHT, false, true);
+            this.information = new ClientInformation("en_us", aurick.opsec.mod.util.NormalizedClientInfo.VIEW_DISTANCE,
+                    ChatVisiblity.FULL, true, 0x7F, aurick.opsec.mod.util.NormalizedClientInfo.MAIN_HAND, false, true);
         }
     }
     //?} else {

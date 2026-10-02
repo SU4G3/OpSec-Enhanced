@@ -138,6 +138,13 @@ public class AddAccountScreen extends Screen {
                     if (account.login()) {
                         AccountManager.getInstance().setActiveAccountUuid(account.getUuid());
                     }
+
+                    if (aurick.opsec.mod.config.OpsecConfig.getInstance().getSettings().isAutoRandomizeNewAccount()) {
+                        CompletableFuture.runAsync(() -> {
+                            account.randomizeSkin();
+                            account.randomizeCape();
+                        });
+                    }
                     
                     String successMsg = OpsecLang.tr(OpsecStrings.ACCOUNT_SUCCESS_ADDED, account.getUsername());
                     if (account.hasRefreshToken()) {

@@ -237,7 +237,7 @@ public class SessionAccount implements Account {
             return new ValidationResultWithRetry(ValidationResult.VALID, 0);
             
         } catch (Exception e) {
-            Opsec.LOGGER.error("[OpSec] Failed to validate token: {}", e.getMessage());
+            Opsec.LOGGER.error("[OpSec] Failed to validate token: {}", aurick.opsec.mod.PrivacyLogger.redactSecrets(e.getMessage()));
             return new ValidationResultWithRetry(ValidationResult.ERROR, 0);
         }
     }
@@ -374,13 +374,15 @@ public class SessionAccount implements Account {
             accessor.opsec$setUserApiService(userApiService);
             
             // Reinitialize profile key pair manager (for chat signatures)
-            // Signing OFF: never fetch/store a real chat-session key pair for this account.
-            // The per-message signature is already stripped elsewhere (ServerboundChatPacketMixin,
-            // ClientPacketListenerMixin) — this additionally skips the one-time Mojang key-service
-            // round trip that would otherwise happen on first use, and the local key pair file.
-            ProfileKeyPairManager profileKeyPairManager = OpsecConfig.getInstance().shouldNotSign()
-                    ? ProfileKeyPairManager.EMPTY_KEY_MANAGER
-                    : ProfileKeyPairManager.create(userApiService, newUser, mc.gameDirectory.toPath());
+            // Always create the real manager, even with Signing OFF — a vanilla client
+            // always fetches/holds a session key pair regardless of whether it ever signs
+            // a message. Skipping that fetch is what a server-side "no chat-session packet"
+            // check (the same class of detection NoChatReports-style mods are caught by)
+            // keys on; the per-message signature is stripped separately and is what
+            // actually delivers the privacy benefit (ServerboundChatPacketMixin,
+            // ClientPacketListenerMixin), without this observable side channel.
+            ProfileKeyPairManager profileKeyPairManager =
+                    ProfileKeyPairManager.create(userApiService, newUser, mc.gameDirectory.toPath());
             accessor.opsec$setProfileKeyPairManager(profileKeyPairManager);
             
             // Reinitialize social manager
@@ -398,8 +400,9 @@ public class SessionAccount implements Account {
             return true;
             
         } catch (Exception e) {
-            this.lastError = "Login error: " + e.getMessage();
-            Opsec.LOGGER.error("[OpSec] Failed to login: {}", e.getMessage(), e);
+            String safeMessage = aurick.opsec.mod.PrivacyLogger.redactSecrets(e.getMessage());
+            this.lastError = "Login error: " + safeMessage;
+            Opsec.LOGGER.error("[OpSec] Failed to login: {}", safeMessage);
             return false;
         }
     }
@@ -496,7 +499,7 @@ public class SessionAccount implements Account {
             Opsec.LOGGER.info("[OpSec] Randomized skin for {} (variant={})", username, variant);
             return true;
         } catch (Exception e) {
-            this.lastError = "Skin upload error: " + e.getMessage();
+            this.lastError = "Skin upload error: " + aurick.opsec.mod.PrivacyLogger.redactSecrets(e.getMessage());
             Opsec.LOGGER.error("[OpSec] {}", this.lastError);
             return false;
         }
@@ -563,7 +566,7 @@ public class SessionAccount implements Account {
             Opsec.LOGGER.info("[OpSec] Randomized cape for {}", username);
             return true;
         } catch (Exception e) {
-            this.lastError = "Cape change error: " + e.getMessage();
+            this.lastError = "Cape change error: " + aurick.opsec.mod.PrivacyLogger.redactSecrets(e.getMessage());
             Opsec.LOGGER.error("[OpSec] {}", this.lastError);
             return false;
         }
@@ -705,10 +708,11 @@ public class SessionAccount implements Account {
                 this.lastError = "Refresh interrupted";
                 return false;
             } catch (Exception e) {
+                String safeMessage = aurick.opsec.mod.PrivacyLogger.redactSecrets(e.getMessage());
                 if (attempt < MAX_RETRIES) {
                     long delay = calculateRetryDelay(attempt, ValidationResult.ERROR, 0);
                     Opsec.LOGGER.warn("[OpSec] Refresh attempt {} failed: {}, retrying in {}ms...", 
-                            attempt, e.getMessage(), delay);
+                            attempt, safeMessage, delay);
                     try {
                         Thread.sleep(delay);
                     } catch (InterruptedException ie) {
@@ -716,8 +720,8 @@ public class SessionAccount implements Account {
                         break;
                     }
                 } else {
-                    this.lastError = "Refresh error: " + e.getMessage();
-                    Opsec.LOGGER.error("[OpSec] Failed to refresh token: {}", e.getMessage());
+                    this.lastError = "Refresh error: " + safeMessage;
+                    Opsec.LOGGER.error("[OpSec] Failed to refresh token: {}", safeMessage);
                 }
             }
         }
@@ -837,7 +841,7 @@ public class SessionAccount implements Account {
             return new TokenResult(json.get("access_token").getAsString(), 0, false);
             
         } catch (Exception e) {
-            Opsec.LOGGER.debug("[OpSec] Refresh with client {} scope {} error: {}", clientId, scope, e.getMessage());
+            Opsec.LOGGER.debug("[OpSec] Refresh with client {} scope {} error: {}", clientId, scope, aurick.opsec.mod.PrivacyLogger.redactSecrets(e.getMessage()));
             return new TokenResult(null, 0, false);
         }
     }
@@ -905,7 +909,7 @@ public class SessionAccount implements Account {
             return new TokenResult(json.get("Token").getAsString(), 0, false);
             
         } catch (Exception e) {
-            Opsec.LOGGER.debug("[OpSec] Xbox Live auth error: {}", e.getMessage());
+            Opsec.LOGGER.debug("[OpSec] Xbox Live auth error: {}", aurick.opsec.mod.PrivacyLogger.redactSecrets(e.getMessage()));
             return new TokenResult(null, 0, false);
         }
     }
@@ -951,7 +955,7 @@ public class SessionAccount implements Account {
             return new XSTSResult(new String[]{token, userHash}, 0, false);
             
         } catch (Exception e) {
-            Opsec.LOGGER.error("[OpSec] XSTS auth error: {}", e.getMessage());
+            Opsec.LOGGER.error("[OpSec] XSTS auth error: {}", aurick.opsec.mod.PrivacyLogger.redactSecrets(e.getMessage()));
             return new XSTSResult(null, 0, false);
         }
     }
@@ -983,7 +987,7 @@ public class SessionAccount implements Account {
             return new TokenResult(json.get("access_token").getAsString(), 0, false);
             
         } catch (Exception e) {
-            Opsec.LOGGER.error("[OpSec] Minecraft auth error: {}", e.getMessage());
+            Opsec.LOGGER.error("[OpSec] Minecraft auth error: {}", aurick.opsec.mod.PrivacyLogger.redactSecrets(e.getMessage()));
             return new TokenResult(null, 0, false);
         }
     }

@@ -54,6 +54,16 @@ public final class OpsecStrings {
 
     public static final String SECTION_APPEARANCE = "opsec.section.appearance";
     public static final String OPTION_ACCENT_COLOR = "opsec.option.accentColor";
+    public static final String OPTION_HALLOWEEN_THEME = "opsec.option.halloweenTheme";
+    public static final String TOOLTIP_HALLOWEEN_THEME = "opsec.option.halloweenTheme.tooltip";
+    public static final String OPTION_CHRISTMAS_THEME = "opsec.option.christmasTheme";
+    public static final String TOOLTIP_CHRISTMAS_THEME = "opsec.option.christmasTheme.tooltip";
+    public static final String OPTION_WALLPAPER_MODE = "opsec.option.wallpaperMode";
+    public static final String TOOLTIP_WALLPAPER_MODE = "opsec.option.wallpaperMode.tooltip";
+    public static final String WALLPAPER_MODE_OFF = "opsec.option.wallpaperMode.off";
+    public static final String WALLPAPER_MODE_AUTO = "opsec.option.wallpaperMode.auto";
+    public static final String WALLPAPER_MODE_HALLOWEEN = "opsec.option.wallpaperMode.halloween";
+    public static final String WALLPAPER_MODE_CHRISTMAS = "opsec.option.wallpaperMode.christmas";
     public static final String OPTION_COMPACT_LAYOUT = "opsec.option.compactLayout";
     public static final String TOOLTIP_COMPACT_LAYOUT = "opsec.option.compactLayout.tooltip";
     public static final String OPTION_SHOW_HUD = "opsec.option.showHud";
@@ -89,6 +99,8 @@ public final class OpsecStrings {
     public static final String TOOLTIP_SCRUB_PACK_HEADERS = "opsec.option.scrubPackHeaders.tooltip";
     public static final String OPTION_AUTO_PURGE_PACK_CACHE = "opsec.option.autoPurgePackCache";
     public static final String TOOLTIP_AUTO_PURGE_PACK_CACHE = "opsec.option.autoPurgePackCache.tooltip";
+    public static final String OPTION_AUTO_RANDOMIZE_NEW_ACCOUNT = "opsec.option.autoRandomizeNewAccount";
+    public static final String TOOLTIP_AUTO_RANDOMIZE_NEW_ACCOUNT = "opsec.option.autoRandomizeNewAccount.tooltip";
     public static final String OPTION_KEY_RESOLUTION_SPOOFING = "opsec.option.keyResolutionSpoofing";
     public static final String OPTION_FAKE_DEFAULT_KEYBINDS = "opsec.option.fakeDefaultKeybinds";
     public static final String OPTION_METEOR_FIX = "opsec.option.meteorFix";

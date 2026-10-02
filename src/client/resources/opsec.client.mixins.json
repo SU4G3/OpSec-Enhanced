@@ -18,6 +18,7 @@
 		"PackSelectionModelEntryBaseMixin",
 		"ChannelRegistrationMixin",
 		"JoinMultiplayerScreenMixin",
+		"SeasonalWallpaperMixin",
 		"MinecraftAccessor",
 		"MinecraftMixin",
 		"YggdrasilUserApiServiceMixin",

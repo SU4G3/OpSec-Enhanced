@@ -67,6 +67,6 @@ public final class OpsecHud {
 
     public static String hudText() {
         SpoofSettings settings = OpsecConfig.getInstance().getSettings();
-        return settings.getAccentColor().code() + "OpSec: " + settings.getEffectiveBrand();
+        return settings.getEffectiveAccentColor().code() + "OpSec: " + settings.getEffectiveBrand();
     }
 }

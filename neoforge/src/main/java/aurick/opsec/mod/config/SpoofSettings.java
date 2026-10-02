@@ -106,6 +106,8 @@ public class SpoofSettings {
         public String code() { return code; }
     }
 
+    public enum WallpaperMode { OFF, AUTO, HALLOWEEN, CHRISTMAS }
+
     // Brand spoofing — when true, the client advertises a vanilla brand and blocks
     // ALL outbound custom payloads. When false, the natural Fabric brand passes
     // through and channels are filtered via the Whitelist tab (Block All / Auto /
@@ -185,6 +187,11 @@ public class SpoofSettings {
     private boolean commandHistoryGuard = true;
     // Wipe downloads/ and server-resource-packs/ on client shutdown.
     private boolean autoPurgePackCache = false;
+    private boolean autoRandomizeNewAccount = false;
+    // Purely cosmetic seasonal accent-color override, see SeasonalTheme. Each defaults on.
+    private boolean halloweenThemeEnabled = true;
+    private boolean christmasThemeEnabled = true;
+    private WallpaperMode wallpaperMode = WallpaperMode.AUTO;
     // Require confirmation before following a server-sent Transfer (1.20.5+) to a
     // different host/port — an unrequested redirect is also an IP disclosure.
     private boolean confirmTransfer = true;
@@ -331,6 +338,42 @@ public class SpoofSettings {
     public boolean isAutoPurgePackCache() { return autoPurgePackCache; }
     public void setAutoPurgePackCache(boolean autoPurgePackCache) { this.autoPurgePackCache = autoPurgePackCache; }
 
+    public boolean isAutoRandomizeNewAccount() { return autoRandomizeNewAccount; }
+    public void setAutoRandomizeNewAccount(boolean autoRandomizeNewAccount) { this.autoRandomizeNewAccount = autoRandomizeNewAccount; }
+
+    public boolean isHalloweenThemeEnabled() { return halloweenThemeEnabled; }
+    public void setHalloweenThemeEnabled(boolean halloweenThemeEnabled) { this.halloweenThemeEnabled = halloweenThemeEnabled; }
+
+    public boolean isChristmasThemeEnabled() { return christmasThemeEnabled; }
+    public void setChristmasThemeEnabled(boolean christmasThemeEnabled) { this.christmasThemeEnabled = christmasThemeEnabled; }
+
+    public WallpaperMode getWallpaperMode() { return wallpaperMode; }
+    public void setWallpaperMode(WallpaperMode wallpaperMode) { this.wallpaperMode = wallpaperMode != null ? wallpaperMode : WallpaperMode.AUTO; }
+
+    public aurick.opsec.mod.util.SeasonalTheme.Season getActiveWallpaperSeason() {
+        return switch (wallpaperMode) {
+            case OFF -> aurick.opsec.mod.util.SeasonalTheme.Season.NONE;
+            case HALLOWEEN -> aurick.opsec.mod.util.SeasonalTheme.Season.HALLOWEEN;
+            case CHRISTMAS -> aurick.opsec.mod.util.SeasonalTheme.Season.CHRISTMAS;
+            case AUTO -> aurick.opsec.mod.util.SeasonalTheme.currentSeason(true, true);
+        };
+    }
+
+    /**
+     * {@link #getAccentColor()}, unless a seasonal theme is currently active and enabled —
+     * used for actual rendering (HUD, multiplayer button); the settings widget itself still
+     * reads {@link #getAccentColor()} directly so it shows the user's real stored preference.
+     */
+    public AccentColor getEffectiveAccentColor() {
+        aurick.opsec.mod.util.SeasonalTheme.Season season =
+                aurick.opsec.mod.util.SeasonalTheme.currentSeason(halloweenThemeEnabled, christmasThemeEnabled);
+        return switch (season) {
+            case HALLOWEEN -> AccentColor.ORANGE;
+            case CHRISTMAS -> AccentColor.RED;
+            case NONE -> accentColor;
+        };
+    }
+
     public boolean isConfirmTransfer() { return confirmTransfer; }
     public void setConfirmTransfer(boolean confirmTransfer) { this.confirmTransfer = confirmTransfer; }
 
@@ -422,6 +465,10 @@ public class SpoofSettings {
         json.addProperty("scrubPackHeaders", scrubPackHeaders);
         json.addProperty("commandHistoryGuard", commandHistoryGuard);
         json.addProperty("autoPurgePackCache", autoPurgePackCache);
+        json.addProperty("autoRandomizeNewAccount", autoRandomizeNewAccount);
+        json.addProperty("halloweenThemeEnabled", halloweenThemeEnabled);
+        json.addProperty("christmasThemeEnabled", christmasThemeEnabled);
+        json.addProperty("wallpaperMode", wallpaperMode.name());
         json.addProperty("confirmTransfer", confirmTransfer);
         json.addProperty("integrityCheckEnabled", integrityCheckEnabled);
         json.addProperty("buttonX", buttonX);
@@ -531,6 +578,16 @@ public class SpoofSettings {
         if (json.has("scrubPackHeaders")) s.scrubPackHeaders = json.get("scrubPackHeaders").getAsBoolean();
         if (json.has("commandHistoryGuard")) s.commandHistoryGuard = json.get("commandHistoryGuard").getAsBoolean();
         if (json.has("autoPurgePackCache")) s.autoPurgePackCache = json.get("autoPurgePackCache").getAsBoolean();
+        if (json.has("autoRandomizeNewAccount")) s.autoRandomizeNewAccount = json.get("autoRandomizeNewAccount").getAsBoolean();
+        if (json.has("halloweenThemeEnabled")) s.halloweenThemeEnabled = json.get("halloweenThemeEnabled").getAsBoolean();
+        if (json.has("christmasThemeEnabled")) s.christmasThemeEnabled = json.get("christmasThemeEnabled").getAsBoolean();
+        if (json.has("wallpaperMode")) {
+            try {
+                s.wallpaperMode = WallpaperMode.valueOf(json.get("wallpaperMode").getAsString());
+            } catch (IllegalArgumentException e) {
+                s.wallpaperMode = WallpaperMode.AUTO;
+            }
+        }
         if (json.has("confirmTransfer")) s.confirmTransfer = json.get("confirmTransfer").getAsBoolean();
         if (json.has("integrityCheckEnabled")) s.integrityCheckEnabled = json.get("integrityCheckEnabled").getAsBoolean();
         if (json.has("buttonX")) s.buttonX = json.get("buttonX").getAsInt();
@@ -604,6 +661,10 @@ public class SpoofSettings {
         this.scrubPackHeaders = other.scrubPackHeaders;
         this.commandHistoryGuard = other.commandHistoryGuard;
         this.autoPurgePackCache = other.autoPurgePackCache;
+        this.autoRandomizeNewAccount = other.autoRandomizeNewAccount;
+        this.halloweenThemeEnabled = other.halloweenThemeEnabled;
+        this.christmasThemeEnabled = other.christmasThemeEnabled;
+        this.wallpaperMode = other.wallpaperMode;
         this.confirmTransfer = other.confirmTransfer;
         this.integrityCheckEnabled = other.integrityCheckEnabled;
         this.buttonX = other.buttonX;

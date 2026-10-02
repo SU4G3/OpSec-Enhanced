@@ -242,6 +242,25 @@ public class AccountManager {
     }
 
     /**
+     * Export accounts to a passphrase-encrypted envelope (see {@link AccountExportCrypto}).
+     */
+    public String exportToJsonEncrypted(char[] passphrase) {
+        return AccountExportCrypto.encrypt(exportToJson(), passphrase);
+    }
+
+    /**
+     * Import accounts from a JSON string, transparently decrypting it first if it's an
+     * {@link AccountExportCrypto} envelope. Plain (legacy, unencrypted) exports still work.
+     * @throws Exception if the content is an encrypted envelope and the passphrase is wrong
+     */
+    public int importFromJson(String jsonContent, char[] passphrase) throws Exception {
+        if (AccountExportCrypto.isEncryptedEnvelope(jsonContent)) {
+            jsonContent = AccountExportCrypto.decrypt(jsonContent, passphrase);
+        }
+        return importFromJson(jsonContent);
+    }
+
+    /**
      * Import accounts from a JSON string.
      * @return number of accounts imported
      */

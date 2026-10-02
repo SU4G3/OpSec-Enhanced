@@ -466,7 +466,7 @@ public class ClientConnectionMixin {
         data.getBytes(data.readerIndex(), bytes);
         String joined = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
         List<Identifier> result = new ArrayList<>();
-        for (String token : joined.split(" ")) {
+        for (String token : joined.split("\0")) {
             if (token.isEmpty()) continue;
             Identifier parsed = Identifier.tryParse(token);
             if (parsed != null) result.add(parsed);
@@ -478,7 +478,7 @@ public class ClientConnectionMixin {
     private static net.minecraft.network.FriendlyByteBuf opsec$writeRegisterPayload(List<Identifier> channels) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < channels.size(); i++) {
-            if (i > 0) sb.append(' ');
+            if (i > 0) sb.append('\0');
             sb.append(channels.get(i).toString());
         }
         byte[] bytes = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);

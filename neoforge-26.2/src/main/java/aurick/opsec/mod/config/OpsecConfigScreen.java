@@ -477,6 +477,21 @@ public class OpsecConfigScreen extends Screen {
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_ACCENT_COLOR),
                 (button, value) -> { settings.setAccentColor(value); config.save(); }));
 
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isHalloweenThemeEnabled())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_HALLOWEEN_THEME)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_HALLOWEEN_THEME),
+                (button, value) -> { settings.setHalloweenThemeEnabled(value); config.save(); }));
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isChristmasThemeEnabled())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_CHRISTMAS_THEME)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_CHRISTMAS_THEME),
+                (button, value) -> { settings.setChristmasThemeEnabled(value); config.save(); }));
+
+        widgets.add(cycleBuilder(WallpaperModeDisplay::getDisplayName, List.of(SpoofSettings.WallpaperMode.values()), settings.getWallpaperMode())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_WALLPAPER_MODE)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_WALLPAPER_MODE),
+                (button, value) -> { settings.setWallpaperMode(value); config.save(); }));
+
         widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isCompactLayout())
                 .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_COMPACT_LAYOUT)))
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_COMPACT_LAYOUT),
@@ -756,7 +771,12 @@ public class OpsecConfigScreen extends Screen {
         
         // Add account section
         widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_ADD_ACCOUNT)));
-        
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), config.getSettings().isAutoRandomizeNewAccount())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_AUTO_RANDOMIZE_NEW_ACCOUNT)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_AUTO_RANDOMIZE_NEW_ACCOUNT),
+                (button, value) -> { config.getSettings().setAutoRandomizeNewAccount(value); config.save(); }));
+
         // Add button to open add account dialog
         widgets.add(Button.builder(OpsecLang.component(OpsecStrings.ACCOUNT_ADD_SESSION), button -> {
             //? if >=26.2 {
@@ -809,13 +829,7 @@ public class OpsecConfigScreen extends Screen {
                     return;
                 }
                 String content = Files.readString(file, StandardCharsets.UTF_8);
-                int imported = AccountManager.getInstance().importFromJson(content);
-                Minecraft.getInstance().execute(() -> {
-                    if (imported > 0) {
-                        Opsec.LOGGER.info("[OpSec] Imported {} accounts from {}", imported, file);
-                    }
-                    refreshScreen();
-                });
+                finishImport(content, file.toString());
             } catch (Exception e) {
                 Opsec.LOGGER.error("[OpSec] Failed to import accounts: {}", e.getMessage());
             }
@@ -839,15 +853,7 @@ public class OpsecConfigScreen extends Screen {
 
                 File file = new File(result);
                 String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
-                int imported = AccountManager.getInstance().importFromJson(content);
-
-                // Refresh UI on main thread
-                Minecraft.getInstance().execute(() -> {
-                    if (imported > 0) {
-                        Opsec.LOGGER.info("[OpSec] Imported {} accounts from {}", imported, file.getName());
-                    }
-                    refreshScreen();
-                });
+                finishImport(content, file.getName());
             } catch (Exception e) {
                 Opsec.LOGGER.error("[OpSec] Failed to import accounts: {}", e.getMessage());
             }
@@ -855,16 +861,58 @@ public class OpsecConfigScreen extends Screen {
         //?}
     }
 
+    /** Imports {content}, prompting for a passphrase first if it's an encrypted export envelope. */
+    private void finishImport(String content, String sourceLabel) {
+        if (aurick.opsec.mod.accounts.AccountExportCrypto.isEncryptedEnvelope(content)) {
+            ExportPassphraseScreen prompt = new ExportPassphraseScreen(
+                    this, false,
+                    passphrase -> new Thread(() -> {
+                        try {
+                            int imported = AccountManager.getInstance().importFromJson(content, passphrase);
+                            Minecraft.getInstance().execute(() -> {
+                                if (imported > 0) {
+                                    Opsec.LOGGER.info("[OpSec] Imported {} accounts from {}", imported, sourceLabel);
+                                    this.minecraft.setScreenAndShow(this);
+                                }
+                                refreshScreen();
+                            });
+                        } catch (Exception e) {
+                            Opsec.LOGGER.error("[OpSec] Failed to decrypt import (wrong passphrase?): {}", e.getMessage());
+                        }
+                    }, "OpSec-Import-Thread").start(),
+                    () -> {}
+            );
+            Minecraft.getInstance().execute(() -> this.minecraft.setScreenAndShow(prompt));
+            return;
+        }
+        int imported = AccountManager.getInstance().importFromJson(content);
+        Minecraft.getInstance().execute(() -> {
+            if (imported > 0) {
+                Opsec.LOGGER.info("[OpSec] Imported {} accounts from {}", imported, sourceLabel);
+            }
+            refreshScreen();
+        });
+    }
+
     private void openExportDialog() {
+        ExportPassphraseScreen prompt = new ExportPassphraseScreen(
+                this, true,
+                passphrase -> writeExportFile(AccountManager.getInstance().exportToJsonEncrypted(passphrase)),
+                () -> writeExportFile(AccountManager.getInstance().exportToJson())
+        );
+        this.minecraft.setScreenAndShow(prompt);
+    }
+
+    private void writeExportFile(String json) {
         //? if >=26.3 {
         /*// See openImportDialog() for why this uses a fixed path on 26.3+.
         new Thread(() -> {
             try {
                 java.nio.file.Path file = aurick.opsec.mod.util.NeoCompat.getConfigDir().resolve("opsec-accounts-export.json");
-                String json = AccountManager.getInstance().exportToJson();
                 Files.writeString(file, json, StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
                 Opsec.LOGGER.info("[OpSec] Exported accounts to {}", file);
+                Minecraft.getInstance().execute(() -> this.minecraft.setScreenAndShow(this));
             } catch (Exception e) {
                 Opsec.LOGGER.error("[OpSec] Failed to export accounts: {}", e.getMessage());
             }
@@ -890,11 +938,11 @@ public class OpsecConfigScreen extends Screen {
                     file = new File(file.getParentFile(), file.getName() + ".json");
                 }
 
-                String json = AccountManager.getInstance().exportToJson();
                 Files.write(file.toPath(), json.getBytes(StandardCharsets.UTF_8),
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
                 Opsec.LOGGER.info("[OpSec] Exported accounts to {}", file.getPath());
+                Minecraft.getInstance().execute(() -> this.minecraft.setScreenAndShow(this));
             } catch (Exception e) {
                 Opsec.LOGGER.error("[OpSec] Failed to export accounts: {}", e.getMessage());
             }
@@ -1880,6 +1928,17 @@ public class OpsecConfigScreen extends Screen {
     private static class AccentColorDisplay {
         public static Component getDisplayName(SpoofSettings.AccentColor color) {
             return Component.literal(color.code() + color.name());
+        }
+    }
+
+    private static class WallpaperModeDisplay {
+        public static Component getDisplayName(SpoofSettings.WallpaperMode mode) {
+            return switch (mode) {
+                case OFF -> OpsecLang.component(OpsecStrings.WALLPAPER_MODE_OFF);
+                case AUTO -> OpsecLang.component(OpsecStrings.WALLPAPER_MODE_AUTO);
+                case HALLOWEEN -> OpsecLang.component(OpsecStrings.WALLPAPER_MODE_HALLOWEEN);
+                case CHRISTMAS -> OpsecLang.component(OpsecStrings.WALLPAPER_MODE_CHRISTMAS);
+            };
         }
     }
 

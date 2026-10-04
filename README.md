@@ -52,6 +52,7 @@
 - **[Auto-Purge Pack Cache On Exit](#auto-purge-pack-cache-on-exit)** - Wipes the downloaded-pack cache on game close, on top of per-account isolation
 - **[Lazy Server List Ping](#lazy-server-list-ping)** - Stops the multiplayer screen from auto-pinging every saved server on open
 - **Jar Integrity Mirrors** - Integrity check falls back through GitHub Releases and CurseForge if Modrinth doesn't have a match, instead of silently skipping
+- **[Streamer Mode](#streamer-mode)** - On-screen redaction for content creators: hides F3 coordinates and replaces every player's nametag/tab-list name with a placeholder or rotating glyphs
 
 > If you're interested in servers or plugins that are using tracking related exploits then look in the [Hall of Shame](https://github.com/NikOverflow/ExploitPreventer/blob/master/HALL_OF_SHAME.md).
 
@@ -132,6 +133,10 @@ If settings are changed while connected to a server it is recommended to reconne
 | **Log Detections** | Log all detection events to game log for transparency |
 | **Debug Alerts** | Show alerts for all probed keys, even unchanged ones |
 | **Debug Command** | Enable the `/opsec` debug command. Off by default.
+| **Streamer Mode** | Master switch for [Streamer Mode](#streamer-mode)'s on-screen redaction (default: off) |
+| **Hide Coordinates (F3)** | Replace the F3 position group with a placeholder (MC 1.21.11+ only, default: on) |
+| **Mask Player Names** | Replace every player's nametag/tab-list name, including your own (default: on) |
+| **Name Mask Style** | **Hidden** (fixed placeholder) or **Glyphs** (rotating, default) — see [Streamer Mode](#streamer-mode) |
 
 #### Accounts Tab
 
@@ -171,6 +176,8 @@ The `/opsec` command is **off by default** (enable it in Misc → Debug Command)
 - **On 26.3 specifically**, two features are scaled back rather than shipped as an unverified guess, since MC 26.3 changed a lot at once (authlib 9.x→10.x, GLFW→SDL windowing, and a resource-pack composition rework):
   - **Bypass Server Pack Requirement / Strip Mod Shader Overrides don't apply.** 26.3 replaced how server packs are opened internally (`openPrimary`/`openFull` → `openMetadata`/`openResources` returning a `Stream<PackResources>`) — a real architecture change, not a signature tweak, and not something to wrap correctly on a guess without a server actually pushing a pack to test against. Every other protection feature is unaffected.
   - **Account Import/Export uses a fixed file path instead of a native file picker** — 26.3 dropped the `lwjgl-tinyfd` module entirely (window backend moved to SDL). Import reads from, and Export writes to, `opsec-accounts-import.json` / `opsec-accounts-export.json` in your Minecraft config folder.
+- **Streamer Mode's Hide Coordinates only works on MC 1.21.11+** (and only on NeoForge 1.21.11/26.2, not the 1.21.1 port) — the underlying `DebugEntryPosition` F3 entry doesn't exist before that version. It also only covers vanilla's own F3 overlay, not a third-party debug-HUD replacement (e.g. BetterF3) that reads your position independently — see the [Streamer Mode](#streamer-mode) section for why that's a harder problem than a signature change.
+- **Streamer Mode's Mask Player Names doesn't cover names baked into chat message text** — only the above-head nametag and tab list are replaced so far.
 
 ## Feature Details
 
@@ -483,6 +490,21 @@ Minecraft collects and sends telemetry data to Mojang, including:
 - Usage statistics
 
 OpSec blocks telemetry sending to Mojang when telemetry blocking is enabled. Does not affect gameplay.
+
+---
+
+### Streamer Mode
+
+Purely visual, on-screen redaction for content creators — it doesn't change anything sent to the server (that's already covered by the rest of the mod), only what's rendered on your own screen.
+
+- **Hide Coordinates** - Replaces the F3 debug overlay's position group (world XYZ, block/chunk position, facing) with a placeholder. MC 1.21.11+ only — see [Known Issues](#known-issues). Does not cover third-party debug-HUD mods (e.g. BetterF3) that read your position independently of vanilla's F3 overlay rather than through it; closing that would mean redacting raw text as it's drawn regardless of source, which risks false-positively blanking unrelated debug lines (FPS, memory, etc.) — not attempted here.
+- **Mask Player Names** - Replaces every player's above-head nametag and tab-list entry with a placeholder, including your own. Two styles:
+  - **Hidden** - fixed `Player` placeholder
+  - **Glyphs** - pseudo-random CJK-style characters that rotate every few seconds, the same look as Hypixel's own nick-disguise, so a viewer can't read a stable fake name off a clip and treat it as an identity
+  
+  Hooks the same `PlayerInfo.getTabListDisplayName()` field vanilla's own tab list checks before falling back to the raw profile name — third-party tab-list replacements (BetterTab and similar) read this exact field too, so the mask applies there as well, not just to vanilla's own rendering. Does not yet cover names baked into chat message text.
+
+Off by default. Enable from the Misc tab.
 
 ---
 

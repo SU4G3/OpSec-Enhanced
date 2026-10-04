@@ -41,7 +41,13 @@
 		"ServerboundClientInformationPacketMixin",
 		"CrashReportMixin",
 		"ServerStatusPingerMixin",
-		"CommandHistoryMixin"
+		"CommandHistoryMixin",
+		"ChunkBatchSizeCalculatorMixin",
+		"DialogScreenMixin",
+		"DebugEntryPositionMixin",
+		"PlayerNameMaskMixin",
+		"PlayerTabOverlayMixin",
+		"PlayerInfoDisplayNameMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

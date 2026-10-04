@@ -526,6 +526,33 @@ public class OpsecConfigScreen extends Screen {
                     }));
         }
 
+        // Streamer Mode Section
+        widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_STREAMER_MODE)));
+
+        widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isStreamerModeEnabled())
+                .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_STREAMER_MODE)))
+                .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_STREAMER_MODE),
+                (button, value) -> { settings.setStreamerModeEnabled(value); config.save(); refreshScreen(); }));
+
+        if (settings.isStreamerModeEnabled()) {
+            widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isStreamerHideCoordinates())
+                    .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_STREAMER_HIDE_COORDS)))
+                    .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_STREAMER_HIDE_COORDS),
+                    (button, value) -> { settings.setStreamerHideCoordinates(value); config.save(); }));
+
+            widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isStreamerMaskPlayerNames())
+                    .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_STREAMER_MASK_NAMES)))
+                    .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_STREAMER_MASK_NAMES),
+                    (button, value) -> { settings.setStreamerMaskPlayerNames(value); config.save(); refreshScreen(); }));
+
+            if (settings.isStreamerMaskPlayerNames()) {
+                widgets.add(cycleBuilder(NameMaskStyleDisplay::getDisplayName, List.of(SpoofSettings.NameMaskStyle.values()), settings.getStreamerNameMaskStyle())
+                        .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_STREAMER_NAME_STYLE)))
+                        .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_STREAMER_NAME_STYLE),
+                        (button, value) -> { settings.setStreamerNameMaskStyle(value); config.save(); }));
+            }
+        }
+
         // Alerts & Logging Section
         widgets.add(createSectionHeader(OpsecLang.tr(OpsecStrings.SECTION_ALERTS)));
         
@@ -1945,6 +1972,15 @@ public class OpsecConfigScreen extends Screen {
     private static class AccentColorDisplay {
         public static Component getDisplayName(SpoofSettings.AccentColor color) {
             return Component.literal(color.code() + color.name());
+        }
+    }
+
+    private static class NameMaskStyleDisplay {
+        public static Component getDisplayName(SpoofSettings.NameMaskStyle style) {
+            return switch (style) {
+                case HIDDEN -> OpsecLang.component(OpsecStrings.NAME_STYLE_HIDDEN);
+                case GLYPHS -> OpsecLang.component(OpsecStrings.NAME_STYLE_GLYPHS);
+            };
         }
     }
 

@@ -93,6 +93,16 @@ public class SpoofSettings {
         ALWAYS_ON
     }
 
+    /** How a masked player name is displayed in Streamer Mode. */
+    public enum NameMaskStyle {
+        /** Replace with a fixed placeholder ("Player"). */
+        HIDDEN,
+        /** Replace with pseudo-random CJK-style glyphs that rotate every few seconds
+         *  (same look as Hypixel's own nick-disguise), so a viewer can't read a stable
+         *  fake name off-stream and correlate it across the recording. */
+        GLYPHS
+    }
+
     /** Accent color applied to the multiplayer-screen "OpSec" button and the config screen title. */
     public enum AccentColor {
         CYAN("§b"),
@@ -106,6 +116,12 @@ public class SpoofSettings {
         public String code() { return code; }
     }
 
+    /**
+     * Controls the seasonal background gradient on the OpSec settings screen (see
+     * {@code SeasonalWallpaperMixin}). OFF/HALLOWEEN/CHRISTMAS are manual overrides —
+     * HALLOWEEN/CHRISTMAS show that theme immediately regardless of the real date, so
+     * it can be previewed without waiting for the calendar window.
+     */
     public enum WallpaperMode { OFF, AUTO, HALLOWEEN, CHRISTMAS }
 
     // Brand spoofing — when true, the client advertises a vanilla brand and blocks
@@ -187,10 +203,14 @@ public class SpoofSettings {
     private boolean commandHistoryGuard = true;
     // Wipe downloads/ and server-resource-packs/ on client shutdown.
     private boolean autoPurgePackCache = false;
+    // Randomize a newly-added session account's skin/cape right away, so an alt doesn't
+    // start out sharing a skin/cape with another saved account (see Skin/Cape Correlation Alerts).
     private boolean autoRandomizeNewAccount = false;
     // Purely cosmetic seasonal accent-color override, see SeasonalTheme. Each defaults on.
     private boolean halloweenThemeEnabled = true;
     private boolean christmasThemeEnabled = true;
+    // Seasonal background gradient on the settings screen — independent of the accent-color
+    // toggles above, so one can be on while the other is off.
     private WallpaperMode wallpaperMode = WallpaperMode.AUTO;
     // Require confirmation before following a server-sent Transfer (1.20.5+) to a
     // different host/port — an unrequested redirect is also an IP disclosure.
@@ -198,6 +218,15 @@ public class SpoofSettings {
     // The mod's own startup jar-hash check calls out to Modrinth/GitHub/CurseForge.
     // A privacy tool should let you turn off its own network calls too.
     private boolean integrityCheckEnabled = true;
+
+    // Streamer Mode — purely visual redaction for content creators, no effect on
+    // what's sent to the server (that's already covered by the rest of the mod).
+    private boolean streamerModeEnabled = false;
+    private boolean streamerHideCoordinates = true;
+    private boolean streamerMaskPlayerNames = true;
+    private NameMaskStyle streamerNameMaskStyle = NameMaskStyle.GLYPHS;
+    private boolean streamerHideServerAddress = true;
+
 
     // UI Settings
     private int buttonX = -1;
@@ -350,6 +379,7 @@ public class SpoofSettings {
     public WallpaperMode getWallpaperMode() { return wallpaperMode; }
     public void setWallpaperMode(WallpaperMode wallpaperMode) { this.wallpaperMode = wallpaperMode != null ? wallpaperMode : WallpaperMode.AUTO; }
 
+    /** Resolves {@link #wallpaperMode} to an actual season to render, applying AUTO's calendar check. */
     public aurick.opsec.mod.util.SeasonalTheme.Season getActiveWallpaperSeason() {
         return switch (wallpaperMode) {
             case OFF -> aurick.opsec.mod.util.SeasonalTheme.Season.NONE;
@@ -379,6 +409,22 @@ public class SpoofSettings {
 
     public boolean isIntegrityCheckEnabled() { return integrityCheckEnabled; }
     public void setIntegrityCheckEnabled(boolean integrityCheckEnabled) { this.integrityCheckEnabled = integrityCheckEnabled; }
+
+    public boolean isStreamerModeEnabled() { return streamerModeEnabled; }
+    public void setStreamerModeEnabled(boolean enabled) { this.streamerModeEnabled = enabled; }
+
+    public boolean isStreamerHideCoordinates() { return streamerHideCoordinates; }
+    public void setStreamerHideCoordinates(boolean enabled) { this.streamerHideCoordinates = enabled; }
+
+    public boolean isStreamerMaskPlayerNames() { return streamerMaskPlayerNames; }
+    public void setStreamerMaskPlayerNames(boolean enabled) { this.streamerMaskPlayerNames = enabled; }
+
+    public NameMaskStyle getStreamerNameMaskStyle() { return streamerNameMaskStyle; }
+    public void setStreamerNameMaskStyle(NameMaskStyle style) { this.streamerNameMaskStyle = style != null ? style : NameMaskStyle.GLYPHS; }
+
+    public boolean isStreamerHideServerAddress() { return streamerHideServerAddress; }
+    public void setStreamerHideServerAddress(boolean enabled) { this.streamerHideServerAddress = enabled; }
+
 
     public int[] getButtonPosition() {
         if (buttonX < 0 || buttonY < 0) return null;
@@ -418,7 +464,7 @@ public class SpoofSettings {
     public void setTamperWarningDismissed(boolean dismissed) { this.tamperWarningDismissed = dismissed; }
 
     public String getEffectiveBrand() {
-        if (!spoofAsVanilla) return OpsecConstants.Brands.NEOFORGE;
+        if (!spoofAsVanilla) return FABRIC;
         return switch (brandOverride) {
             case LUNAR_CLIENT -> OpsecConstants.Brands.LUNAR_CLIENT_PREFIX + lunarVersionSuffix;
             case BADLION -> OpsecConstants.Brands.BADLION_CLIENT;
@@ -471,6 +517,11 @@ public class SpoofSettings {
         json.addProperty("wallpaperMode", wallpaperMode.name());
         json.addProperty("confirmTransfer", confirmTransfer);
         json.addProperty("integrityCheckEnabled", integrityCheckEnabled);
+        json.addProperty("streamerModeEnabled", streamerModeEnabled);
+        json.addProperty("streamerHideCoordinates", streamerHideCoordinates);
+        json.addProperty("streamerMaskPlayerNames", streamerMaskPlayerNames);
+        json.addProperty("streamerNameMaskStyle", streamerNameMaskStyle.name());
+        json.addProperty("streamerHideServerAddress", streamerHideServerAddress);
         json.addProperty("buttonX", buttonX);
         json.addProperty("buttonY", buttonY);
         json.addProperty("skippedUpdateVersion", skippedUpdateVersion);
@@ -590,6 +641,17 @@ public class SpoofSettings {
         }
         if (json.has("confirmTransfer")) s.confirmTransfer = json.get("confirmTransfer").getAsBoolean();
         if (json.has("integrityCheckEnabled")) s.integrityCheckEnabled = json.get("integrityCheckEnabled").getAsBoolean();
+        if (json.has("streamerModeEnabled")) s.streamerModeEnabled = json.get("streamerModeEnabled").getAsBoolean();
+        if (json.has("streamerHideCoordinates")) s.streamerHideCoordinates = json.get("streamerHideCoordinates").getAsBoolean();
+        if (json.has("streamerMaskPlayerNames")) s.streamerMaskPlayerNames = json.get("streamerMaskPlayerNames").getAsBoolean();
+        if (json.has("streamerNameMaskStyle")) {
+            try {
+                s.streamerNameMaskStyle = NameMaskStyle.valueOf(json.get("streamerNameMaskStyle").getAsString());
+            } catch (IllegalArgumentException e) {
+                s.streamerNameMaskStyle = NameMaskStyle.GLYPHS;
+            }
+        }
+        if (json.has("streamerHideServerAddress")) s.streamerHideServerAddress = json.get("streamerHideServerAddress").getAsBoolean();
         if (json.has("buttonX")) s.buttonX = json.get("buttonX").getAsInt();
         if (json.has("buttonY")) s.buttonY = json.get("buttonY").getAsInt();
         if (json.has("skippedUpdateVersion")) s.skippedUpdateVersion = json.get("skippedUpdateVersion").getAsString();
@@ -667,6 +729,11 @@ public class SpoofSettings {
         this.wallpaperMode = other.wallpaperMode;
         this.confirmTransfer = other.confirmTransfer;
         this.integrityCheckEnabled = other.integrityCheckEnabled;
+        this.streamerModeEnabled = other.streamerModeEnabled;
+        this.streamerHideCoordinates = other.streamerHideCoordinates;
+        this.streamerMaskPlayerNames = other.streamerMaskPlayerNames;
+        this.streamerNameMaskStyle = other.streamerNameMaskStyle;
+        this.streamerHideServerAddress = other.streamerHideServerAddress;
         this.buttonX = other.buttonX;
         this.buttonY = other.buttonY;
         this.skippedUpdateVersion = other.skippedUpdateVersion;

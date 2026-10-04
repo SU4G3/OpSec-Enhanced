@@ -25,6 +25,18 @@ public final class LogScrubber {
     private static final Pattern MAC_USER_PATH = Pattern.compile("(?<![\\w.])(/Users/)([^/\\s]+)");
     private static final Pattern IPV4 = Pattern.compile("\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b");
     private static final Pattern IPV6 = Pattern.compile("\\b(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}\\b");
+    // SystemReport (net.minecraft.SystemReport) writes these as "\t<key>: <value>" lines in
+    // every crash report's "System Details" block — CPU identifier/microarchitecture, GPU
+    // name/deviceId, and RAM slot layout are a high-entropy, stable-per-machine hardware
+    // fingerprint, strictly beyond what's needed to read a crash report. JVM/Debug Flags can
+    // carry launcher-specific paths, so they're redacted too. The key label is kept so the
+    // report still shows which fields were present.
+    private static final Pattern HARDWARE_DETAIL_LINE = Pattern.compile(
+        "(?m)^(\\t(?:Processor Vendor|Processor Name|Identifier|Microarchitecture|Frequency \\(GHz\\)|"
+            + "Graphics card #\\d+ (?:name|vendor|VRAM \\(MiB\\)|deviceId|versionInfo)|"
+            + "Memory slot #\\d+ (?:capacity \\(MiB\\)|clockSpeed \\(GHz\\)|type)|"
+            + "JVM Flags|Debug Flags): ).*$"
+    );
 
     private LogScrubber() {
     }
@@ -41,6 +53,7 @@ public final class LogScrubber {
         result = MAC_USER_PATH.matcher(result).replaceAll("$1<redacted>");
         result = IPV4.matcher(result).replaceAll("<redacted-ip>");
         result = IPV6.matcher(result).replaceAll("<redacted-ip>");
+        result = HARDWARE_DETAIL_LINE.matcher(result).replaceAll("$1<redacted-hw>");
 
         String serverAddress = LocalAddressUtil.serverAddress;
         if (serverAddress != null && !serverAddress.isBlank()) {

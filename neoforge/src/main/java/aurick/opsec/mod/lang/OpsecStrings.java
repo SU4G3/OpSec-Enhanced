@@ -329,4 +329,17 @@ public final class OpsecStrings {
     // Chat-signing mode tooltips
     public static final String CHATSIGNING_SIGN_TOOLTIP = "opsec.chatSigning.sign.tooltip";
     public static final String CHATSIGNING_OFF_TOOLTIP = "opsec.chatSigning.off.tooltip";
+
+    // Streamer Mode
+    public static final String SECTION_STREAMER_MODE = "opsec.section.streamerMode";
+    public static final String OPTION_STREAMER_MODE = "opsec.option.streamerMode";
+    public static final String TOOLTIP_STREAMER_MODE = "opsec.option.streamerMode.tooltip";
+    public static final String OPTION_STREAMER_HIDE_COORDS = "opsec.option.streamerHideCoords";
+    public static final String TOOLTIP_STREAMER_HIDE_COORDS = "opsec.option.streamerHideCoords.tooltip";
+    public static final String OPTION_STREAMER_MASK_NAMES = "opsec.option.streamerMaskNames";
+    public static final String TOOLTIP_STREAMER_MASK_NAMES = "opsec.option.streamerMaskNames.tooltip";
+    public static final String OPTION_STREAMER_NAME_STYLE = "opsec.option.streamerNameStyle";
+    public static final String TOOLTIP_STREAMER_NAME_STYLE = "opsec.option.streamerNameStyle.tooltip";
+    public static final String NAME_STYLE_HIDDEN = "opsec.option.streamerNameStyle.hidden";
+    public static final String NAME_STYLE_GLYPHS = "opsec.option.streamerNameStyle.glyphs";
 }

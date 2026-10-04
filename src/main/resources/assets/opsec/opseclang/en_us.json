@@ -268,5 +268,17 @@
   "opsec.button.disableAll.tooltip": "Remove all mods from whitelist",
   "opsec.chatSigning.sign.tooltip": "Always sign chat messages",
   "opsec.chatSigning.off.tooltip": "Never sign chat messages",
-  "opsec.whitelist.suffix.required": " §8(required)"
+  "opsec.whitelist.suffix.required": " §8(required)",
+
+  "opsec.section.streamerMode": "§f§lStreamer Mode",
+  "opsec.option.streamerMode": "Streamer Mode",
+  "opsec.option.streamerMode.tooltip": "Master switch for on-screen redaction aimed at streaming/recording. Purely visual - does not change what's sent to the server, that's already covered by the rest of the mod.",
+  "opsec.option.streamerHideCoords": "Hide Coordinates (F3)",
+  "opsec.option.streamerHideCoords.tooltip": "Replaces the XYZ/block/chunk/facing lines on the vanilla F3 debug overlay with a placeholder. Only implemented on 26.1+ so far; does not cover third-party debug-HUD replacement mods (e.g. BetterF3) that read your position independently - known limitation.",
+  "opsec.option.streamerMaskNames": "Mask Player Names",
+  "opsec.option.streamerMaskNames.tooltip": "Replaces every player's nametag and tab-list entry with a placeholder, including your own. Only implemented on 26.1+ so far. Does not yet cover names baked into chat message text.",
+  "opsec.option.streamerNameStyle": "Name Mask Style",
+  "opsec.option.streamerNameStyle.tooltip": "Hidden: fixed 'Player' placeholder. Glyphs: random CJK-style characters that rotate every few seconds, same look as Hypixel's own nick-disguise, so a viewer can't read a stable fake name off a clip.",
+  "opsec.option.streamerNameStyle.hidden": "Hidden",
+  "opsec.option.streamerNameStyle.glyphs": "Glyphs (rotating)"
 }

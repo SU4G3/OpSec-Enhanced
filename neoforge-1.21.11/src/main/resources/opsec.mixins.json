@@ -42,6 +42,12 @@
 		"CrashReportMixin",
 		"ServerStatusPingerMixin",
 		"CommandHistoryMixin",
+		"ChunkBatchSizeCalculatorMixin",
+		"DialogScreenMixin",
+		"PlayerNameMaskMixin",
+		"PlayerTabOverlayMixin",
+		"PlayerInfoDisplayNameMixin",
+		"DebugEntryPositionMixin",
 		"GuiHudMixin"
 	],
 	"injectors": {

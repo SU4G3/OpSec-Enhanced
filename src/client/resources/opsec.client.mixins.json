@@ -42,7 +42,10 @@
 		"ServerboundClientInformationPacketMixin",
 		"CrashReportMixin",
 		"ServerStatusPingerMixin",
-		"CommandHistoryMixin"${gui_hud_mixin_entry}
+		"CommandHistoryMixin",
+		"PlayerNameMaskMixin",
+		"PlayerTabOverlayMixin",
+		"PlayerInfoDisplayNameMixin"${chunk_batch_mixin_entry}${dialog_screen_mixin_entry}${streamer_f3_mixin_entry}${gui_hud_mixin_entry}
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -42,7 +43,7 @@ public class GameConnectionProxyMixin {
 
     @Inject(method = "connect(Ljava/net/InetSocketAddress;ZLnet/minecraft/network/Connection;)Lio/netty/channel/ChannelFuture;",
         at = @At("HEAD"))
-    private static void opsec$captureTarget(InetSocketAddress address, boolean useEpoll, Connection connection, CallbackInfo ci) {
+    private static void opsec$captureTarget(InetSocketAddress address, boolean useEpoll, Connection connection, CallbackInfoReturnable<ChannelFuture> cir) {
         SpoofSettings settings = OpsecConfig.getInstance().getSettings();
         if (settings.getGameProxyType() == SpoofSettings.GameProxyType.NONE) return;
         if (settings.getGameProxyHost().isEmpty()) return;

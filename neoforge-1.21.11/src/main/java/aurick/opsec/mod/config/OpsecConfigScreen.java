@@ -462,7 +462,37 @@ public class OpsecConfigScreen extends Screen {
         widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isLazyServerPing())
                 .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_LAZY_SERVER_PING)))
                 .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_LAZY_SERVER_PING),
-                (button, value) -> { settings.setLazyServerPing(value); config.save(); }));
+                (button, value) -> { settings.setLazyServerPing(value); config.save(); refreshScreen(); }));
+
+        if (settings.isLazyServerPing()) {
+            widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), settings.isCloudflarePingRelayEnabled())
+                    .withTooltip(v -> Tooltip.create(Component.literal(
+                        "Instead of just skipping saved-server pings, fetch live status through a "
+                        + "Cloudflare Worker you deploy yourself (see cloudflare-worker/README.md, issue #15) "
+                        + "so the server never sees this IP during the ping.")))
+                    .create(0, 0, 230, 20, Component.literal("Cloudflare Ping Relay"),
+                    (button, value) -> { settings.setCloudflarePingRelayEnabled(value); config.save(); refreshScreen(); }));
+
+            if (settings.isCloudflarePingRelayEnabled()) {
+                widgets.add(Button.builder(Component.literal("Configure Ping Relay..."), button -> {
+                    this.minecraft.setScreen(new CloudflareRelaySettingsScreen(this, config));
+                }).size(230, 20).build());
+            }
+        }
+
+        widgets.add(cycleBuilder(GameProxyTypeDisplay::getDisplayName, List.of(SpoofSettings.GameProxyType.values()), settings.getGameProxyType())
+                .withTooltip(v -> Tooltip.create(Component.literal(
+                    "Routes the actual game connection (not just outbound HTTP) through a SOCKS5 or "
+                    + "HTTP proxy you configure below. JVM proxy flags have no effect on this connection "
+                    + "otherwise -- see issue #11.")))
+                .create(0, 0, 230, 20, Component.literal("Game Connection Proxy"),
+                (button, value) -> { settings.setGameProxyType(value); config.save(); refreshScreen(); }));
+
+        if (settings.getGameProxyType() != SpoofSettings.GameProxyType.NONE) {
+            widgets.add(Button.builder(Component.literal("Configure Proxy..."), button -> {
+                this.minecraft.setScreen(new GameProxySettingsScreen(this, config));
+            }).size(230, 20).build());
+        }
 
         return new WidgetTab(OpsecLang.component(OpsecStrings.TAB_PROTECTION), widgets);
     }
@@ -1955,6 +1985,16 @@ public class OpsecConfigScreen extends Screen {
     private static class AccentColorDisplay {
         public static Component getDisplayName(SpoofSettings.AccentColor color) {
             return Component.literal(color.code() + color.name());
+        }
+    }
+
+    private static class GameProxyTypeDisplay {
+        public static Component getDisplayName(SpoofSettings.GameProxyType type) {
+            return switch (type) {
+                case NONE -> Component.literal("Off");
+                case SOCKS5 -> Component.literal("SOCKS5");
+                case HTTP -> Component.literal("HTTP");
+            };
         }
     }
 

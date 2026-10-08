@@ -1,7 +1,14 @@
 package aurick.opsec.mod.mixin.client;
 
+import aurick.opsec.mod.Opsec;
 import aurick.opsec.mod.config.OpsecConfig;
+import aurick.opsec.mod.config.SpoofSettings;
+import aurick.opsec.mod.proxy.CloudflarePingRelay;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerStatusPinger;
+//? if >=1.21.11 {
+/*import net.minecraft.server.network.EventLoopGroupHolder;
+*///?}
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -28,14 +35,54 @@ import java.net.UnknownHostException;
  * status message, and schedules the repaint — which is exactly the accurate "not pinged"
  * outcome this feature wants, using vanilla's own real error-handling path instead of
  * this mod guessing at per-version callback parameter positions.</p>
+ *
+ * <p>On >=1.20.6, when a Cloudflare ping relay is configured (see #15 and
+ * {@code cloudflare-worker/ping-relay.js}), this backs the (otherwise-skipped) direct
+ * ping with that relay instead of throwing outright, so saved servers still show live
+ * status without a direct connection from this IP. Below 1.20.6, {@code pingServer} only
+ * takes a single {@code Runnable} and this mod doesn't special-case its exact semantics,
+ * so the relay path is skipped there and Lazy Server List Ping just blocks as before.</p>
  */
 @Mixin(ServerStatusPinger.class)
 public abstract class ServerStatusPingerMixin {
 
-    @Inject(method = "pingServer", at = @At("HEAD"))
+    //? if >=1.20.6 {
+    //? if >=1.21.11 {
+    /*@Inject(method = "pingServer(Lnet/minecraft/client/multiplayer/ServerData;Ljava/lang/Runnable;Ljava/lang/Runnable;Lnet/minecraft/server/network/EventLoopGroupHolder;)V",
+        at = @At("HEAD"), cancellable = true)
+    private void opsec$blockAutoPing(ServerData data, Runnable onSuccess, Runnable onFailure, EventLoopGroupHolder group, CallbackInfo ci) throws UnknownHostException {
+    *///?} else {
+    @Inject(method = "pingServer(Lnet/minecraft/client/multiplayer/ServerData;Ljava/lang/Runnable;Ljava/lang/Runnable;)V",
+        at = @At("HEAD"), cancellable = true)
+    private void opsec$blockAutoPing(ServerData data, Runnable onSuccess, Runnable onFailure, CallbackInfo ci) throws UnknownHostException {
+    //?}
+        SpoofSettings settings = OpsecConfig.getInstance().getSettings();
+        if (!settings.isLazyServerPing()) return;
+
+        String workerUrl = settings.getCloudflarePingRelayUrl();
+        if (!settings.isCloudflarePingRelayEnabled() || workerUrl.isEmpty()) {
+            throw new UnknownHostException("OpSec: Lazy Server List Ping is on, not auto-pinging");
+        }
+
+        ci.cancel();
+        CloudflarePingRelay.ping(workerUrl, data).whenComplete((success, error) -> {
+            if (error != null) {
+                Opsec.LOGGER.debug("[OpSec] Cloudflare ping relay failed: {}", error.getMessage());
+            }
+            if (Boolean.TRUE.equals(success)) {
+                onSuccess.run();
+            } else {
+                data.setState(ServerData.State.UNREACHABLE);
+                onFailure.run();
+            }
+        });
+    }
+    //?} else {
+    /*@Inject(method = "pingServer", at = @At("HEAD"))
     private void opsec$blockAutoPing(CallbackInfo ci) throws UnknownHostException {
         if (OpsecConfig.getInstance().getSettings().isLazyServerPing()) {
             throw new UnknownHostException("OpSec: Lazy Server List Ping is on, not auto-pinging");
         }
     }
+    *///?}
 }

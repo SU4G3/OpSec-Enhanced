@@ -1,5 +1,6 @@
 package aurick.opsec.mod.config;
 
+import aurick.opsec.mod.accounts.AccountCrypto;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -94,6 +95,9 @@ public class SpoofSettings {
     }
 
     /** How a masked player name is displayed in Streamer Mode. */
+    /** Proxy protocol used for the actual multiplayer game connection (see #11). */
+    public enum GameProxyType { NONE, SOCKS5, HTTP }
+
     public enum NameMaskStyle {
         /** Replace with a fixed placeholder ("Player"). */
         HIDDEN,
@@ -195,6 +199,10 @@ public class SpoofSettings {
     private boolean logScrubberEnabled = true;
     // Skip the automatic ping of every saved server when the multiplayer screen opens.
     private boolean lazyServerPing = false;
+    // When Lazy Server List Ping is on, optionally back the (skipped) direct ping with a
+    // user-deployed Cloudflare Worker relay instead (see #15).
+    private boolean cloudflarePingRelayEnabled = false;
+    private String cloudflarePingRelayUrl = "";
     // Replace X-Minecraft-Username/UUID/Version/Version-ID/Pack-Format and User-Agent
     // with neutral values on server-pack downloads — the pack host sees these even
     // when it's a third-party CDN, not just the game server.
@@ -221,6 +229,16 @@ public class SpoofSettings {
 
     // Streamer Mode — purely visual redaction for content creators, no effect on
     // what's sent to the server (that's already covered by the rest of the mod).
+    // Game connection proxy (#11) -- the actual multiplayer TCP connection (Connection.java)
+    // is a raw Netty Bootstrap with no proxy concept at all; JVM-level -DsocksProxyHost etc.
+    // have zero effect on it. Off by default -- this is a real behavior change to the
+    // connection itself, not a passive redaction, so it stays opt-in.
+    private GameProxyType gameProxyType = GameProxyType.NONE;
+    private String gameProxyHost = "";
+    private int gameProxyPort = 1080;
+    private String gameProxyUsername = "";
+    private String gameProxyPassword = ""; // encrypted at rest via AccountCrypto, same as account secrets
+
     private boolean streamerModeEnabled = false;
     private boolean streamerHideCoordinates = true;
     private boolean streamerMaskPlayerNames = true;
@@ -356,6 +374,12 @@ public class SpoofSettings {
     public void setLogScrubberEnabled(boolean logScrubberEnabled) { this.logScrubberEnabled = logScrubberEnabled; }
 
     public boolean isLazyServerPing() { return lazyServerPing; }
+
+    public boolean isCloudflarePingRelayEnabled() { return cloudflarePingRelayEnabled; }
+    public void setCloudflarePingRelayEnabled(boolean enabled) { this.cloudflarePingRelayEnabled = enabled; }
+
+    public String getCloudflarePingRelayUrl() { return cloudflarePingRelayUrl; }
+    public void setCloudflarePingRelayUrl(String url) { this.cloudflarePingRelayUrl = url != null ? url.trim() : ""; }
     public void setLazyServerPing(boolean lazyServerPing) { this.lazyServerPing = lazyServerPing; }
 
     public boolean isScrubPackHeaders() { return scrubPackHeaders; }
@@ -409,6 +433,21 @@ public class SpoofSettings {
 
     public boolean isIntegrityCheckEnabled() { return integrityCheckEnabled; }
     public void setIntegrityCheckEnabled(boolean integrityCheckEnabled) { this.integrityCheckEnabled = integrityCheckEnabled; }
+
+    public GameProxyType getGameProxyType() { return gameProxyType; }
+    public void setGameProxyType(GameProxyType type) { this.gameProxyType = type != null ? type : GameProxyType.NONE; }
+
+    public String getGameProxyHost() { return gameProxyHost; }
+    public void setGameProxyHost(String host) { this.gameProxyHost = host != null ? host.trim() : ""; }
+
+    public int getGameProxyPort() { return gameProxyPort; }
+    public void setGameProxyPort(int port) { this.gameProxyPort = port; }
+
+    public String getGameProxyUsername() { return gameProxyUsername; }
+    public void setGameProxyUsername(String username) { this.gameProxyUsername = username != null ? username : ""; }
+
+    public String getGameProxyPassword() { return gameProxyPassword; }
+    public void setGameProxyPassword(String password) { this.gameProxyPassword = password != null ? password : ""; }
 
     public boolean isStreamerModeEnabled() { return streamerModeEnabled; }
     public void setStreamerModeEnabled(boolean enabled) { this.streamerModeEnabled = enabled; }
@@ -508,6 +547,8 @@ public class SpoofSettings {
         json.addProperty("normalizeClientInfo", normalizeClientInfo);
         json.addProperty("logScrubberEnabled", logScrubberEnabled);
         json.addProperty("lazyServerPing", lazyServerPing);
+        json.addProperty("cloudflarePingRelayEnabled", cloudflarePingRelayEnabled);
+        json.addProperty("cloudflarePingRelayUrl", cloudflarePingRelayUrl);
         json.addProperty("scrubPackHeaders", scrubPackHeaders);
         json.addProperty("commandHistoryGuard", commandHistoryGuard);
         json.addProperty("autoPurgePackCache", autoPurgePackCache);
@@ -517,6 +558,11 @@ public class SpoofSettings {
         json.addProperty("wallpaperMode", wallpaperMode.name());
         json.addProperty("confirmTransfer", confirmTransfer);
         json.addProperty("integrityCheckEnabled", integrityCheckEnabled);
+        json.addProperty("gameProxyType", gameProxyType.name());
+        json.addProperty("gameProxyHost", gameProxyHost);
+        json.addProperty("gameProxyPort", gameProxyPort);
+        json.addProperty("gameProxyUsername", gameProxyUsername);
+        json.addProperty("gameProxyPassword", AccountCrypto.encrypt(gameProxyPassword));
         json.addProperty("streamerModeEnabled", streamerModeEnabled);
         json.addProperty("streamerHideCoordinates", streamerHideCoordinates);
         json.addProperty("streamerMaskPlayerNames", streamerMaskPlayerNames);
@@ -626,6 +672,8 @@ public class SpoofSettings {
         if (json.has("normalizeClientInfo")) s.normalizeClientInfo = json.get("normalizeClientInfo").getAsBoolean();
         if (json.has("logScrubberEnabled")) s.logScrubberEnabled = json.get("logScrubberEnabled").getAsBoolean();
         if (json.has("lazyServerPing")) s.lazyServerPing = json.get("lazyServerPing").getAsBoolean();
+        if (json.has("cloudflarePingRelayEnabled")) s.cloudflarePingRelayEnabled = json.get("cloudflarePingRelayEnabled").getAsBoolean();
+        if (json.has("cloudflarePingRelayUrl")) s.cloudflarePingRelayUrl = json.get("cloudflarePingRelayUrl").getAsString();
         if (json.has("scrubPackHeaders")) s.scrubPackHeaders = json.get("scrubPackHeaders").getAsBoolean();
         if (json.has("commandHistoryGuard")) s.commandHistoryGuard = json.get("commandHistoryGuard").getAsBoolean();
         if (json.has("autoPurgePackCache")) s.autoPurgePackCache = json.get("autoPurgePackCache").getAsBoolean();
@@ -641,6 +689,17 @@ public class SpoofSettings {
         }
         if (json.has("confirmTransfer")) s.confirmTransfer = json.get("confirmTransfer").getAsBoolean();
         if (json.has("integrityCheckEnabled")) s.integrityCheckEnabled = json.get("integrityCheckEnabled").getAsBoolean();
+        if (json.has("gameProxyType")) {
+            try {
+                s.gameProxyType = GameProxyType.valueOf(json.get("gameProxyType").getAsString());
+            } catch (IllegalArgumentException e) {
+                s.gameProxyType = GameProxyType.NONE;
+            }
+        }
+        if (json.has("gameProxyHost")) s.gameProxyHost = json.get("gameProxyHost").getAsString();
+        if (json.has("gameProxyPort")) s.gameProxyPort = json.get("gameProxyPort").getAsInt();
+        if (json.has("gameProxyUsername")) s.gameProxyUsername = json.get("gameProxyUsername").getAsString();
+        if (json.has("gameProxyPassword")) s.gameProxyPassword = AccountCrypto.decrypt(json.get("gameProxyPassword").getAsString());
         if (json.has("streamerModeEnabled")) s.streamerModeEnabled = json.get("streamerModeEnabled").getAsBoolean();
         if (json.has("streamerHideCoordinates")) s.streamerHideCoordinates = json.get("streamerHideCoordinates").getAsBoolean();
         if (json.has("streamerMaskPlayerNames")) s.streamerMaskPlayerNames = json.get("streamerMaskPlayerNames").getAsBoolean();
@@ -720,6 +779,8 @@ public class SpoofSettings {
         this.normalizeClientInfo = other.normalizeClientInfo;
         this.logScrubberEnabled = other.logScrubberEnabled;
         this.lazyServerPing = other.lazyServerPing;
+        this.cloudflarePingRelayEnabled = other.cloudflarePingRelayEnabled;
+        this.cloudflarePingRelayUrl = other.cloudflarePingRelayUrl;
         this.scrubPackHeaders = other.scrubPackHeaders;
         this.commandHistoryGuard = other.commandHistoryGuard;
         this.autoPurgePackCache = other.autoPurgePackCache;
@@ -729,6 +790,11 @@ public class SpoofSettings {
         this.wallpaperMode = other.wallpaperMode;
         this.confirmTransfer = other.confirmTransfer;
         this.integrityCheckEnabled = other.integrityCheckEnabled;
+        this.gameProxyType = other.gameProxyType;
+        this.gameProxyHost = other.gameProxyHost;
+        this.gameProxyPort = other.gameProxyPort;
+        this.gameProxyUsername = other.gameProxyUsername;
+        this.gameProxyPassword = other.gameProxyPassword;
         this.streamerModeEnabled = other.streamerModeEnabled;
         this.streamerHideCoordinates = other.streamerHideCoordinates;
         this.streamerMaskPlayerNames = other.streamerMaskPlayerNames;

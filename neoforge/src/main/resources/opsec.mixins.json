@@ -46,7 +46,10 @@
 		"PlayerNameMaskMixin",
 		"PlayerTabOverlayMixin",
 		"PlayerInfoDisplayNameMixin",
-		"GuiHudMixin"
+		"HttpTextureMixin",
+		"GuiHudMixin",
+		"GameConnectionProxyMixin",
+		"GameConnectionProxyPipelineMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

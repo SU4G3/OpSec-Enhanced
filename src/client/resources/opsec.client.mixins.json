@@ -45,7 +45,9 @@
 		"CommandHistoryMixin",
 		"PlayerNameMaskMixin",
 		"PlayerTabOverlayMixin",
-		"PlayerInfoDisplayNameMixin"${chunk_batch_mixin_entry}${dialog_screen_mixin_entry}${streamer_f3_mixin_entry}${gui_hud_mixin_entry}
+		"PlayerInfoDisplayNameMixin",
+		"GameConnectionProxyMixin",
+		"GameConnectionProxyPipelineMixin"${chunk_batch_mixin_entry}${dialog_screen_mixin_entry}${streamer_f3_mixin_entry}${skin_texture_downloader_mixin_entry}${http_texture_mixin_entry}${gui_hud_mixin_entry}
 	],
 	"injectors": {
 		"defaultRequire": 1

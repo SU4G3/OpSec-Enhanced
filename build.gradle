@@ -74,6 +74,17 @@ def dialogScreenMixinEntry = hasDialogScreen ? ',\n\t\t"DialogScreenMixin"' : ''
 def hasDebugEntryPosition = isAtLeast(minecraft_version.toString(), "1.21.11")
 def streamerF3MixinEntry = hasDebugEntryPosition ? ',\n\t\t"DebugEntryPositionMixin"' : ''
 
+// Skin/cape texture fetch (#12/#13/#14): SkinTextureDownloader replaces the older
+// HttpTexture as the class that fetches another player's/skull's/Mannequin's skin texture
+// URL, between MC 1.21.1 (HttpTexture, confirmed via javap) and 1.21.4 (SkinTextureDownloader,
+// confirmed via javap) -- exactly one existing Stonecutter version boundary. Exactly one of
+// the two mixins is ever the real implementation on a given target; the other is a no-op
+// stub with no @Mixin annotation, so it must be stripped from the registered list the same
+// way every other stubbed mixin in this file is.
+def hasSkinTextureDownloader = isAtLeast(minecraft_version.toString(), "1.21.4")
+def skinTextureDownloaderMixinEntry = hasSkinTextureDownloader ? ',\n\t\t"SkinTextureDownloaderMixin"' : ''
+def httpTextureMixinEntry = hasSkinTextureDownloader ? '' : ',\n\t\t"HttpTextureMixin"'
+
 // Apply the correct Loom plugin variant per version target:
 // - net.fabricmc.fabric-loom (non-remap) for unobfuscated MC 26.1+
 // - fabric-loom (legacy/remap) for obfuscated MC <=1.21.11
@@ -175,6 +186,8 @@ tasks.withType(ProcessResources).configureEach {
     inputs.property("chunk_batch_mixin_entry", chunkBatchMixinEntry)
     inputs.property("dialog_screen_mixin_entry", dialogScreenMixinEntry)
     inputs.property("streamer_f3_mixin_entry", streamerF3MixinEntry)
+    inputs.property("skin_texture_downloader_mixin_entry", skinTextureDownloaderMixinEntry)
+    inputs.property("http_texture_mixin_entry", httpTextureMixinEntry)
     filesMatching(["fabric.mod.json", "opsec.client.mixins.json"]) {
         expand(
             "version": project.version,
@@ -186,7 +199,9 @@ tasks.withType(ProcessResources).configureEach {
             "gui_hud_mixin_entry": guiHudMixinEntry,
             "chunk_batch_mixin_entry": chunkBatchMixinEntry,
             "dialog_screen_mixin_entry": dialogScreenMixinEntry,
-            "streamer_f3_mixin_entry": streamerF3MixinEntry
+            "streamer_f3_mixin_entry": streamerF3MixinEntry,
+            "skin_texture_downloader_mixin_entry": skinTextureDownloaderMixinEntry,
+            "http_texture_mixin_entry": httpTextureMixinEntry
         )
     }
 }

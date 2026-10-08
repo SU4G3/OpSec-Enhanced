@@ -48,7 +48,10 @@
 		"PlayerTabOverlayMixin",
 		"PlayerInfoDisplayNameMixin",
 		"DebugEntryPositionMixin",
-		"GuiHudMixin"
+		"SkinTextureDownloaderMixin",
+		"GuiHudMixin",
+		"GameConnectionProxyMixin",
+		"GameConnectionProxyPipelineMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

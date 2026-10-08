@@ -53,6 +53,9 @@
 - **[Lazy Server List Ping](#lazy-server-list-ping)** - Stops the multiplayer screen from auto-pinging every saved server on open
 - **Jar Integrity Mirrors** - Integrity check falls back through GitHub Releases and CurseForge if Modrinth doesn't have a match, instead of silently skipping
 - **[Streamer Mode](#streamer-mode)** - On-screen redaction for content creators: hides F3 coordinates and replaces every player's nametag/tab-list name with a placeholder or rotating glyphs
+- **[Game Connection Proxy](#game-connection-proxy)** - Routes the actual multiplayer TCP connection (not just this mod's own outbound HTTP calls) through a SOCKS5 or HTTP proxy you configure
+- **[Cloudflare Ping Relay](#cloudflare-ping-relay)** - Optional, self-hosted relay for Lazy Server List Ping: see live MOTD/player-count for saved servers without a direct connection from your IP
+- **Trusted Skin/Cape Texture Hosts** - Rejects any skin/cape texture URL that doesn't point at `textures.minecraft.net` (a malicious server could otherwise push a fake player-list/skull-block/NPC entry with a texture URL pointing anywhere, leaking your IP to that host the moment it renders)
 
 > If you're interested in servers or plugins that are using tracking related exploits then look in the [Hall of Shame](https://github.com/NikOverflow/ExploitPreventer/blob/master/HALL_OF_SHAME.md).
 
@@ -112,6 +115,8 @@ If settings are changed while connected to a server it is recommended to reconne
 | **Scrub Pack Download Headers** | Enable/disable [neutralizing per-player pack-download headers](#scrub-pack-download-headers) (MC 1.20.3+, default: on) |
 | **Auto-Purge Pack Cache On Exit** | Enable/disable [wiping the pack cache on game close](#auto-purge-pack-cache-on-exit) (default: off) |
 | **Lazy Server List Ping** | Enable/disable [skipping the automatic multiplayer-list ping](#lazy-server-list-ping) (default: off) |
+| **Cloudflare Ping Relay** | Only shown while Lazy Server List Ping is on. Backs saved-server pings with a self-hosted [Cloudflare Worker relay](#cloudflare-ping-relay) instead of just skipping them (default: off) |
+| **Game Connection Proxy** | Route the actual multiplayer connection through **SOCKS5**, **HTTP**, or **Off** (default). See [Game Connection Proxy](#game-connection-proxy) |
 
 #### Whitelist Tab
 
@@ -178,6 +183,7 @@ The `/opsec` command is **off by default** (enable it in Misc → Debug Command)
   - **Account Import/Export uses a fixed file path instead of a native file picker** — 26.3 dropped the `lwjgl-tinyfd` module entirely (window backend moved to SDL). Import reads from, and Export writes to, `opsec-accounts-import.json` / `opsec-accounts-export.json` in your Minecraft config folder.
 - **Streamer Mode's Hide Coordinates only works on MC 1.21.11+** (and only on NeoForge 1.21.11/26.2, not the 1.21.1 port) — the underlying `DebugEntryPosition` F3 entry doesn't exist before that version. It also only covers vanilla's own F3 overlay, not a third-party debug-HUD replacement (e.g. BetterF3) that reads your position independently — see the [Streamer Mode](#streamer-mode) section for why that's a harder problem than a signature change.
 - **Streamer Mode's Mask Player Names doesn't cover names baked into chat message text** — only the above-head nametag and tab list are replaced so far.
+- **Cloudflare Ping Relay requires MC 1.20.6+** — `ServerStatusPinger.pingServer`'s callback shape before that version isn't special-cased, so Lazy Server List Ping just blocks (no relay) on 1.20.1/1.20.2/1.20.4.
 
 ## Feature Details
 
@@ -505,6 +511,26 @@ Purely visual, on-screen redaction for content creators — it doesn't change an
   Hooks the same `PlayerInfo.getTabListDisplayName()` field vanilla's own tab list checks before falling back to the raw profile name — third-party tab-list replacements (BetterTab and similar) read this exact field too, so the mask applies there as well, not just to vanilla's own rendering. Does not yet cover names baked into chat message text.
 
 Off by default. Enable from the Misc tab.
+
+---
+
+### Game Connection Proxy
+
+Routes the *actual multiplayer connection* — not just this mod's own outbound HTTP calls, which already thread a `Proxy` through — via a SOCKS5 or HTTP proxy you configure. `Connection.connect(...)` builds its own raw Netty `Bootstrap`, bypassing `java.net`'s proxy selector entirely, so JVM flags like `-DsocksProxyHost` have zero effect on it. See [issue #11](https://github.com/SU4G3/OpSec-Enhanced/issues/11).
+
+Minecraft's bundled `netty-handler` jar excludes `io.netty.handler.proxy.*`, so both handshakes (SOCKS5 per RFC 1928/1929, and HTTP `CONNECT`) are implemented from scratch rather than relying on Netty's own proxy support. Vanilla's own pipeline construction, compression setup, and worker-group selection are left completely untouched — only the actual TCP dial target is swapped to the proxy, with the handshake handler prepended to the pipeline to tunnel to the real server transparently.
+
+Off by default — this is a real behavior change to the connection itself, not a passive redaction. Enable from the Protection tab, then **Configure Proxy...** for host/port/credentials.
+
+---
+
+### Cloudflare Ping Relay
+
+An optional backend for [Lazy Server List Ping](#lazy-server-list-ping). Instead of just skipping the automatic ping (and losing the MOTD/player-count preview for every saved server), this fetches the same status through a Cloudflare Worker you deploy yourself — the worker does the raw TCP server-list-ping handshake on your behalf and hands back only the parsed status JSON, so the target server never sees your real IP during the ping. See [issue #15](https://github.com/SU4G3/OpSec-Enhanced/issues/15).
+
+This is entirely optional and requires deploying your own worker — see [`cloudflare-worker/README.md`](cloudflare-worker/README.md) for the step-by-step setup (a few minutes with Cloudflare's free `wrangler` CLI). Nobody but you runs the copy you deploy.
+
+Requires Minecraft 1.20.6+ — see [Known Issues](#known-issues). Enable **Lazy Server List Ping** first, then **Cloudflare Ping Relay**, then **Configure Ping Relay...** for your worker's URL.
 
 ---
 

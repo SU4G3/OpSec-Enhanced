@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.Proxy;
-import java.net.Socket;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -91,18 +90,8 @@ public class HttpUtilMixin {
         while (instance.getHeaderField("Location") != null
                 && (status == 300 || status == 301 || status == 302 || status == 303 || status == 305 || status == 307)) {
             if (redirects >= maxRedirects - 1) {
-                // Mirror vanilla JDK's setProxiedClient leak so cap-boundary TCP-count fingerprinting fails.
-                try {
-                    URL leakUrl;
-                    try {
-                        leakUrl = new URL(instance.getHeaderField("Location"));
-                    } catch (MalformedURLException exception) {
-                        leakUrl = new URL(instance.getURL(), instance.getHeaderField("Location"));
-                    }
-                    int leakPort = leakUrl.getPort() == -1 ? leakUrl.getDefaultPort() : leakUrl.getPort();
-                    //noinspection resource
-                    new Socket(leakUrl.getHost(), leakPort);
-                } catch (Exception ignored) {}
+                // Stop before opening another connection: the next Location has not been
+                // checked for local/private addresses, and the redirect budget is exhausted.
                 throw new ProtocolException("Server redirected too many times (" + maxRedirects + ")");
             }
 

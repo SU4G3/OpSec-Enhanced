@@ -63,6 +63,10 @@ function withTimeout(promise, ms) {
 /** Performs the SLP handshake + status request and returns the parsed status JSON object. */
 async function pingServer(host, port) {
   const socket = connect({ hostname: host, port });
+  // Without this, a destination that refuses/resets the connection (e.g. a server that
+  // firewalls datacenter IP ranges, which includes Cloudflare's) surfaces as a generic
+  // "Stream was cancelled" error later on first read instead of a clear connection error here.
+  await socket.opened;
   const writer = socket.writable.getWriter();
   const reader = socket.readable.getReader();
 

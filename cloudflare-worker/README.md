@@ -52,3 +52,10 @@ Saved servers will now show live status again, routed through your worker.
   of simultaneous TCP sockets; this is normally plenty for one-off status pings but
   can be a bottleneck if you have a very large saved-server list and refresh them all
   at once.
+- **Large, security-hardened servers (e.g. Hypixel, 2b2t) commonly firewall off
+  datacenter/cloud IP ranges, including Cloudflare's** — pinging one of these through
+  the relay will fail with `"proxy request failed, cannot connect to the specified
+  address"` even though the relay itself is working correctly (verified by connecting
+  to other non-Minecraft hosts/ports from the same worker). This is the target
+  server's own anti-bot filtering, not a bug in the relay. Smaller/community servers
+  that don't block cloud ranges work fine.

@@ -13,6 +13,17 @@ servers you're checking.
 
 ## Deploy
 
+### Option A: from inside the mod (recommended, no CLI needed)
+
+1. Create a free [Cloudflare account](https://dash.cloudflare.com/sign-up) if you don't have one.
+2. Get an API token: dash.cloudflare.com → your profile icon (top right) → **My Profile** → **API Tokens** → **Create Token** → use the **Edit Cloudflare Workers** template → under "Account Resources" select your account → **Continue to summary** → **Create Token** → copy it (shown once).
+3. Get your Account ID: it's the first path segment after `dash.cloudflare.com/` in your browser's address bar while on the dashboard (a long hex string).
+4. In OpSec's settings → Protection tab → turn on **Lazy Server List Ping** → turn on **Cloudflare Ping Relay** → **Configure Ping Relay...** → paste the API token and Account ID under "Auto-deploy" → **Deploy Worker**.
+
+The mod uploads the worker, enables its `workers.dev` route, and fills in the URL for you. Neither the token nor the account ID is saved — only the resulting worker URL is.
+
+### Option B: manually, with Wrangler
+
 1. Install [Node.js](https://nodejs.org/) if you don't have it, then install Wrangler
    (Cloudflare's CLI):
    ```
@@ -27,18 +38,11 @@ servers you're checking.
    wrangler deploy
    ```
    Wrangler prints a URL like `https://opsec-ping-relay.<your-subdomain>.workers.dev`
-   when it finishes. That's your relay URL.
+   when it finishes. In OpSec's settings → Protection tab → turn on **Lazy Server List
+   Ping** → turn on **Cloudflare Ping Relay** → **Configure Ping Relay...** → paste that
+   URL into the **Worker URL** field at the bottom → **Save**.
 
-## Configure the mod
-
-1. Open OpSec's settings → **Misc** tab.
-2. Turn on **Lazy Server List Ping** (this is what stops the mod from auto-pinging
-   every saved server directly in the first place).
-3. Turn on **Cloudflare Ping Relay**.
-4. Paste your worker URL (the full `https://...workers.dev` address, no `/ping` suffix
-   needed — the mod appends that itself) into **Cloudflare Ping Relay URL**.
-
-Saved servers will now show live status again, routed through your worker.
+Either way, saved servers will now show live status again, routed through your worker.
 
 ## Limitations
 
@@ -59,3 +63,7 @@ Saved servers will now show live status again, routed through your worker.
   to other non-Minecraft hosts/ports from the same worker). This is the target
   server's own anti-bot filtering, not a bug in the relay. Smaller/community servers
   that don't block cloud ranges work fine.
+- **Auto-deploy (Option A) needs a `workers.dev` subdomain already registered on the
+  account** — a brand-new Cloudflare account doesn't have one yet. If deploy fails with
+  a message about that, go to dash.cloudflare.com → Workers & Pages and set one up
+  (one-time, free, just picks a name like `<you>.workers.dev`), then try again.

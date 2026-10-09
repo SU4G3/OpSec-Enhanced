@@ -176,7 +176,6 @@ The `/opsec` command is **off by default** (enable it in Misc → Debug Command)
 ## Known Issues
 
 - **NeoForge builds don't offer Mod Whitelist's AUTO mode** — NeoForge has no equivalent to Fabric's global network-channel registry, so there's no way to scan installed mods for "has a server channel" the way AUTO mode does on Fabric. Use **BLOCK ALL** or **CUSTOM** instead; every other protection feature works the same as Fabric. NeoForge builds are also newer and less battle-tested overall — please report issues.
-- **NeoForge builds have no [Known-Pack Filtering](#known-pack-filtering)** — the underlying detection hook is Fabric-API-only, so this protection is silently inactive on all three NeoForge ports. Tracked in [#8](https://github.com/SU4G3/OpSec-Enhanced/issues/8).
 - **HUD Indicator on 26.1+ is less battle-tested** than on 1.20.1-1.21.11 (which renders via a direct Mixin). See the [Miscellaneous Tab](#miscellaneous-tab) table above.
 - **On 26.3 specifically**, two features are scaled back rather than shipped as an unverified guess, since MC 26.3 changed a lot at once (authlib 9.x→10.x, GLFW→SDL windowing, and a resource-pack composition rework):
   - **Bypass Server Pack Requirement / Strip Mod Shader Overrides don't apply.** 26.3 replaced how server packs are opened internally (`openPrimary`/`openFull` → `openMetadata`/`openResources` returning a `Stream<PackResources>`) — a real architecture change, not a signature tweak, and not something to wrap correctly on a guess without a server actually pushing a pack to test against. Every other protection feature is unaffected.
@@ -547,7 +546,7 @@ Requires Minecraft 1.20.6+ — see [Known Issues](#known-issues). Enable **Lazy 
 1. **Clone the repository**
    ```bash
    git clone https://github.com/SU4G3/OpSec-Enhanced.git
-   cd OpSec
+   cd OpSec-Enhanced
    ```
 
 2. **Build all versions**

@@ -18,7 +18,7 @@ import net.neoforged.neoforge.common.NeoForge;
  *
  * <p>On 1.20.1-1.21.11, this is a no-op: rendering happens via a direct Mixin
  * into vanilla's own {@code Gui.render(...)} instead (see {@code GuiHudMixin}).
- * {@link #shouldRender()} and {@link #hudText()} below are the shared logic
+ * {@link #shouldRender()} and {@link #hudComponent()} below are the shared logic
  * that mixin calls into.</p>
  *
  * <p>Root cause of the "renders nothing on 1.21.6+" regression, found by
@@ -57,7 +57,7 @@ public final class OpsecHud {
         if (!shouldRender()) return;
         GuiGraphicsExtractor graphics = event.getGuiGraphics();
         Minecraft mc = Minecraft.getInstance();
-        graphics.text(mc.font, Component.literal(hudText()), 4, 4, 0xFFFFFFFF, true);
+        graphics.text(mc.font, hudComponent(), 4, 4, 0xFFFFFFFF, true);
     }
     //?}
 
@@ -65,8 +65,27 @@ public final class OpsecHud {
         return OpsecConfig.getInstance().getSettings().isShowHudIndicator();
     }
 
-    public static String hudText() {
+    // Caches the built Component since this is read every frame while the (opt-in,
+    // off-by-default) HUD indicator is on -- avoids a Component.literal(...) allocation
+    // per frame when the accent color/brand haven't changed, which is the common case.
+    private static volatile SpoofSettings.AccentColor cachedAccent;
+    private static volatile String cachedBrand;
+    private static volatile Component cachedComponent;
+
+    public static Component hudComponent() {
         SpoofSettings settings = OpsecConfig.getInstance().getSettings();
-        return settings.getEffectiveAccentColor().code() + "OpSec: " + settings.getEffectiveBrand();
+        SpoofSettings.AccentColor accent = settings.getEffectiveAccentColor();
+        String brand = settings.getEffectiveBrand();
+
+        Component cached = cachedComponent;
+        if (cached != null && accent == cachedAccent && brand.equals(cachedBrand)) {
+            return cached;
+        }
+
+        Component built = Component.literal(accent.code() + "OpSec: " + brand);
+        cachedAccent = accent;
+        cachedBrand = brand;
+        cachedComponent = built;
+        return built;
     }
 }

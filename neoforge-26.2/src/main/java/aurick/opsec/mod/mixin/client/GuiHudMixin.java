@@ -55,7 +55,7 @@ public class GuiHudMixin {
         // same site, which uses an already-correct opaque ARGB shape) but
         // produced literally nothing visible on 1.21.6+. 0xFFFFFFFF is opaque
         // white on every supported version.
-        graphics.drawString(mc.font, Component.literal(OpsecHud.hudText()), 4, 4, 0xFFFFFFFF, true);
+        graphics.drawString(mc.font, OpsecHud.hudComponent(), 4, 4, 0xFFFFFFFF, true);
     }
 }
 *///?} else {

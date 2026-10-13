@@ -290,11 +290,16 @@ public class PrivacyLogger {
     }
 
     // Matches JWT-shaped tokens (header.payload.signature) and long opaque bearer-style
-    // tokens/secrets (20+ base64url characters) that auth API error bodies can echo back.
+    // tokens/secrets (20+ base64 or base64url characters, with optional trailing `=`
+    // padding) that auth API error bodies can echo back. Both charsets are matched since
+    // Microsoft/Xbox/Mojang auth error bodies aren't guaranteed to use one or the other.
     // Cheap `contains`/length guard below skips the regex entirely for ordinary log lines.
+    // Call sites are limited to auth/export error messages (see SessionAccount,
+    // AccountExportCrypto), not general log lines, so the false-positive cost of matching
+    // a 20-char non-secret run there is low -- under-redaction is the worse failure mode.
     private static final java.util.regex.Pattern SECRET_PATTERN = java.util.regex.Pattern.compile(
         "eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}" // JWT
-        + "|[A-Za-z0-9_-]{40,}" // long opaque token/secret run
+        + "|[A-Za-z0-9+/_-]{20,}={0,2}" // long opaque token/secret run (base64 or base64url)
     );
 
     /**
@@ -304,7 +309,7 @@ public class PrivacyLogger {
      * on certain error responses.
      */
     public static String redactSecrets(String text) {
-        if (text == null || text.length() < 40) return text;
+        if (text == null || text.length() < 20) return text;
         return SECRET_PATTERN.matcher(text).replaceAll("[REDACTED]");
     }
 

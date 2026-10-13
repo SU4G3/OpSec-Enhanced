@@ -441,13 +441,21 @@ public class AccountManager {
 
             json.addProperty("activeAccountUuid", activeAccountUuid != null ? activeAccountUuid : "");
             
-            // Write atomically using temp file
+            // Write atomically using temp file. Account secrets are encrypted at rest
+            // (see AccountCrypto), but the file itself is still hardened to owner-only
+            // permissions the same way opsec-accounts.key is -- created restricted from
+            // the instant it exists, not chmod'd after, so there's no world-readable
+            // window on a permissive multi-user Linux box (matters most for any account
+            // whose secret fell back to plaintext, see AccountCrypto.encrypt()).
             Files.createDirectories(ACCOUNTS_PATH.getParent());
             Path tempFile = ACCOUNTS_PATH.resolveSibling(ACCOUNTS_PATH.getFileName() + ".tmp");
+            Files.deleteIfExists(tempFile);
+            AccountCrypto.createRestrictedFile(tempFile);
             Files.writeString(tempFile, GSON.toJson(json));
             Files.move(tempFile, ACCOUNTS_PATH, 
                     java.nio.file.StandardCopyOption.REPLACE_EXISTING,
                     java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            AccountCrypto.restrictToOwner(ACCOUNTS_PATH);
             
             Opsec.LOGGER.debug("[OpSec] Saved {} accounts", accounts.size());
             

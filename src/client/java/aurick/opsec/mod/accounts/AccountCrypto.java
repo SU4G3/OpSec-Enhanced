@@ -1,6 +1,8 @@
 package aurick.opsec.mod.accounts;
 
 import aurick.opsec.mod.Opsec;
+import aurick.opsec.mod.PrivacyLogger;
+import aurick.opsec.mod.config.OpsecConfig;
 import net.fabricmc.loader.api.FabricLoader;
 
 import javax.crypto.Cipher;
@@ -70,8 +72,14 @@ public final class AccountCrypto {
         } catch (Exception e) {
             // Fail closed on the read side, not the write side: if encryption breaks we'd
             // rather keep the plaintext (still functional, matches pre-encryption behavior)
-            // than lose the token entirely.
+            // than lose the token entirely. But this is a real downgrade of a live account
+            // secret to world-readable (on multi-user machines) plaintext, so unlike other
+            // internal failures it must not be silent -- surface it, not just log it.
             Opsec.LOGGER.error("[OpSec] Failed to encrypt account secret, storing as plaintext: {}", e.getMessage());
+            if (OpsecConfig.getInstance().shouldShowToasts()) {
+                PrivacyLogger.toast(PrivacyLogger.AlertType.DANGER, "Account secret stored unencrypted",
+                        "Encryption failed - saved token is in plaintext. See log for details.");
+            }
             return plaintext;
         }
     }
@@ -147,7 +155,7 @@ public final class AccountCrypto {
      * file normally, since {@code PosixFilePermissions} isn't supported there anyway
      * and the OS ACLs already default to the owning user.
      */
-    private static void createRestrictedFile(Path path) throws IOException {
+    static void createRestrictedFile(Path path) throws IOException {
         try {
             FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(
                 Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));

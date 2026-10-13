@@ -1,5 +1,6 @@
 package aurick.opsec.mod.util;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -44,10 +45,22 @@ public class LocalAddressUtil {
             if (address.isAnyLocalAddress()
                     || address.isLoopbackAddress()
                     || address.isSiteLocalAddress()
-                    || address.isLinkLocalAddress()) {
+                    || address.isLinkLocalAddress()
+                    || isUniqueLocalAddress(address)) {
                 return true;
             }
         }
         return false;
+    }
+
+    // Inet6Address.isSiteLocalAddress() only recognizes the obsolete fec0::/10 scope
+    // (deprecated by RFC 3879 in 2004) -- it does NOT recognize fc00::/7 (in practice
+    // fd00::/8), the Unique Local Address range real IPv6 LANs actually use today. Without
+    // this, a malicious server could point a resource-pack/skin-texture URL at an fd00::/8
+    // address and bypass this check entirely to probe the victim's local network.
+    private static boolean isUniqueLocalAddress(InetAddress address) {
+        if (!(address instanceof Inet6Address)) return false;
+        byte[] bytes = address.getAddress();
+        return (bytes[0] & 0xFE) == 0xFC;
     }
 }

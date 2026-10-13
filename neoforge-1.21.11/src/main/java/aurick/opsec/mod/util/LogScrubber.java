@@ -24,7 +24,24 @@ public final class LogScrubber {
     private static final Pattern UNIX_HOME_PATH = Pattern.compile("(?<![\\w.])(/home/)([^/\\s]+)");
     private static final Pattern MAC_USER_PATH = Pattern.compile("(?<![\\w.])(/Users/)([^/\\s]+)");
     private static final Pattern IPV4 = Pattern.compile("\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b");
-    private static final Pattern IPV6 = Pattern.compile("\\b(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}\\b");
+    // The first alternative is the original, uncompressed-only pattern (kept as-is). It
+    // misses every address using IPv6's standard "::" zero-compression shorthand (e.g.
+    // "::1", "fe80::1", "2001:db8::abcd") -- which is the common way these are actually
+    // written -- so those passed through unredacted despite this class's "safe to paste
+    // publicly" guarantee. The remaining alternatives cover every placement of "::"
+    // (leading, trailing, or mid-address). Lookaround boundaries, not \b, since a valid
+    // match can itself start or end with ":", where \b never fires.
+    private static final Pattern IPV6 = Pattern.compile(
+        "\\b(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}\\b"
+        + "|(?<![0-9a-fA-F:])(?:[0-9a-fA-F]{1,4}:){1,7}:(?![0-9a-fA-F:])"
+        + "|(?<![0-9a-fA-F:])(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}(?![0-9a-fA-F:])"
+        + "|(?<![0-9a-fA-F:])(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}(?![0-9a-fA-F:])"
+        + "|(?<![0-9a-fA-F:])(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}(?![0-9a-fA-F:])"
+        + "|(?<![0-9a-fA-F:])(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}(?![0-9a-fA-F:])"
+        + "|(?<![0-9a-fA-F:])(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}(?![0-9a-fA-F:])"
+        + "|(?<![0-9a-fA-F:])[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}(?![0-9a-fA-F:])"
+        + "|(?<![0-9a-fA-F:]):(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)(?![0-9a-fA-F:])"
+    );
     // SystemReport (net.minecraft.SystemReport) writes these as "\t<key>: <value>" lines in
     // every crash report's "System Details" block — CPU identifier/microarchitecture, GPU
     // name/deviceId, and RAM slot layout are a high-entropy, stable-per-machine hardware

@@ -32,6 +32,11 @@ public final class AccountExportCrypto {
     private static final int SALT_BYTES = 16;
     private static final int KEY_BITS = 256;
     private static final int PBKDF2_ITERATIONS = 210_000; // OWASP 2023 minimum for PBKDF2-HMAC-SHA256
+    // Upper bound on an iteration count read back from an import file (see decrypt()) -- an
+    // export file can be shared/synced/tampered before it's imported, and PBEKeySpec has no
+    // limit of its own, so an untrusted file claiming billions of iterations would otherwise
+    // hang the importing user's own client on a single CPU-bound PBKDF2 call.
+    private static final int MAX_IMPORT_ITERATIONS = 1_000_000;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -79,6 +84,9 @@ public final class AccountExportCrypto {
     public static String decrypt(String envelopeJson, char[] passphrase) throws Exception {
         JsonObject envelope = JsonParser.parseString(envelopeJson).getAsJsonObject();
         int iterations = envelope.has("iterations") ? envelope.get("iterations").getAsInt() : PBKDF2_ITERATIONS;
+        if (iterations <= 0 || iterations > MAX_IMPORT_ITERATIONS) {
+            throw new IllegalArgumentException("Export file has an invalid iteration count: " + iterations);
+        }
         byte[] salt = Base64.getDecoder().decode(envelope.get("salt").getAsString());
         byte[] iv = Base64.getDecoder().decode(envelope.get("iv").getAsString());
         byte[] ciphertext = Base64.getDecoder().decode(envelope.get("ciphertext").getAsString());

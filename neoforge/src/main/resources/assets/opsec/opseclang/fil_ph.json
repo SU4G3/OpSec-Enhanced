@@ -87,7 +87,7 @@
   "opsec.option.blockCookies": "I-block ang Cookies",
   "opsec.option.blockCookies.tooltip": "Tumatanggi na mag-imbak ng kahit anong cookie na sinusubukan ng server na i-set sa iyo (MC 1.20.5+). Nananatili ang mga cookie kahit mag-reconnect at sa Transfer hops, kaya isa itong ready-made cross-session/cross-server tracker. Naka-on bilang default.",
   "opsec.option.normalizeClientInfo": "Client Information Normalizer",
-  "opsec.option.normalizeClientInfo.tooltip": "Nag-uulat ng fixed at karaniwang language/view-distance/chat-mode/skin-layers/main-hand na combo sa server sa halip na ang tunay na settings mo - fingerprint din mismo ang kombinasyong iyon. Naka-off bilang default dahil bahagyang naaapektuhan nito ang tingin ng server sa settings mo.",
+  "opsec.option.normalizeClientInfo.tooltip": "Nag-uulat ng fixed at karaniwang language/view-distance/chat-mode/skin-layers/main-hand na combo sa server sa halip na ang tunay na settings mo - fingerprint din mismo ang kombinasyong iyon. Naka-on bilang default - naaapektuhan lang nito ang nakikita ng server, hindi ang aktwal na settings o language ng client mo.",
   "opsec.option.lazyServerPing": "Lazy Server List Ping",
   "opsec.option.lazyServerPing.tooltip": "Pinipigilan ang multiplayer screen na awtomatikong mag-ping sa bawat naka-save na server pagkabukas - bawat ping ay isang connection attempt (at IP leak) sa server na hindi mo naman pinipiling sumali. Kapag naka-on ito, walang ipapakitang MOTD/player-count preview ang mga naka-save na server hangga't hindi mo pa talaga sila sinasalihan. Naka-off bilang default.",
   "opsec.option.commandHistoryGuard": "Command History Guard",

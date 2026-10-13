@@ -14,7 +14,21 @@ public final class OpsecConstants {
         // over the wire (no custom plugin channels of their own on most servers) —
         // see SpoofSettings.BrandOverride javadoc for sourcing and caveats.
         public static final String LUNAR_CLIENT_PREFIX = "lunarclient:";
-        public static final String LUNAR_CLIENT_DEFAULT_SUFFIX = "v1.21.11-704,fabric";
+        // Lunar's own version scheme is "v<lunar-major>.<minor>.<patch>-<2-digit-year><2-digit-week>"
+        // (its own release line, e.g. "v2.22.1-2620" = Lunar 2.22.1, week 20 of 2026) — NOT the
+        // Minecraft version, which the pre-1.8.0 default here wrongly encoded instead (issue #17).
+        // Lunar's own docs (lunarclient.dev/client-brand) explicitly say they give no format
+        // guarantee and that a deviating value isn't itself proof of an unofficial build, so
+        // there's no live endpoint to fetch this from (the installer feed at
+        // launcherupdates.lunarclientcdn.com is a different, unrelated version number). These
+        // values are maintainer-curated from real client sessions and need re-verifying each
+        // OpSec release — see SpoofSettings.lunarBrandHistory for the user-facing picker.
+        public static final String LUNAR_CLIENT_DEFAULT_SUFFIX = "v2.22.1-2620,fabric";
+        public static final String[] LUNAR_CLIENT_KNOWN_SUFFIXES = {
+                "v2.22.1-2620,fabric",
+                "v2.22.0-2620,fabric",
+                "v2.21.41-2619,fabric"
+        };
         public static final String BADLION_CLIENT = "badlion";
 
         private Brands() {}

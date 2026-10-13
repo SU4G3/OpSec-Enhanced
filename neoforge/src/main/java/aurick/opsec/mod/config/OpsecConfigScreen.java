@@ -268,6 +268,12 @@ public class OpsecConfigScreen extends Screen {
                         .withTooltip(v -> Tooltip.create(BrandOverrideDisplay.getTooltip(v)))
                         .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_BRAND_OVERRIDE),
                         (button, value) -> { settings.setBrandOverride(value); config.save(); refreshScreen(); }));
+
+                if (settings.getBrandOverride() == SpoofSettings.BrandOverride.LUNAR_CLIENT) {
+                    widgets.add(Button.builder(Component.literal("Configure Lunar Version..."), button -> {
+                        this.minecraft.setScreen(new LunarVersionSettingsScreen(this, config));
+                    }).size(230, 20).build());
+                }
             }
         }
 

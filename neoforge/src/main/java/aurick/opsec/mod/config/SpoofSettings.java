@@ -4,7 +4,9 @@ import aurick.opsec.mod.accounts.AccountCrypto;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static aurick.opsec.mod.config.OpsecConstants.Brands.*;
@@ -61,8 +63,12 @@ public class SpoofSettings {
      *       validate the version format. OpSec does not implement Lunar's
      *       proprietary cosmetics protocol behind that channel, so this option
      *       only matches brand-string allowlists, not a strict per-channel check.
-     *       The version suffix is user-editable ({@link #lunarVersionSuffix})
-     *       instead of hardcoded, since a stale build number is itself a tell.</li>
+     *       The version suffix is user-editable ({@link #lunarVersionSuffix}, with a
+     *       small maintainer-curated history in {@link #lunarBrandHistory} to pick
+     *       from) instead of hardcoded, since a stale build number is itself a tell.
+     *       There is no live endpoint for this value — see issue #17 and
+     *       {@link OpsecConstants.Brands#LUNAR_CLIENT_DEFAULT_SUFFIX}'s javadoc for
+     *       why — so the curated values need re-verifying by hand each release.</li>
      * </ul>
      *
      * Picking one of these over plain vanilla only helps against a server that
@@ -133,6 +139,12 @@ public class SpoofSettings {
     // Which brand string to send while spoofAsVanilla is on — see BrandOverride javadoc.
     private BrandOverride brandOverride = BrandOverride.DEFAULT;
     private String lunarVersionSuffix = OpsecConstants.Brands.LUNAR_CLIENT_DEFAULT_SUFFIX;
+    // Recently-used Lunar version suffixes (most recent first), offered as a dropdown next
+    // to the manual text field so a user who picked a past value doesn't have to retype it.
+    // Seeded from OpsecConstants.Brands.LUNAR_CLIENT_KNOWN_SUFFIXES; see issue #17 — there is
+    // no live endpoint for this value (see LUNAR_CLIENT_DEFAULT_SUFFIX javadoc), so the list
+    // is maintainer-curated and only grows further via setLunarVersionSuffix's own history push.
+    private List<String> lunarBrandHistory = new ArrayList<>(List.of(OpsecConstants.Brands.LUNAR_CLIENT_KNOWN_SUFFIXES));
 
     // Fragments the TLS ClientHello of the mod's own update-check / integrity-check
     // HTTPS requests across multiple TCP segments, to dodge naive SNI-based DPI
@@ -188,7 +200,7 @@ public class SpoofSettings {
     private boolean blockCookies = true;
     // Replace the outgoing ClientInformation (language/view-distance/chat-mode/skin-layers/
     // main-hand) with a fixed common baseline instead of the player's real settings.
-    private boolean normalizeClientInfo = false;
+    private boolean normalizeClientInfo = true;
     // Redact OS username, IP addresses, and the player's name from crash reports.
     private boolean logScrubberEnabled = true;
     // Skip the automatic ping of every saved server when the multiplayer screen opens.
@@ -289,6 +301,21 @@ public class SpoofSettings {
         this.lunarVersionSuffix = (suffix == null || suffix.isBlank())
                 ? OpsecConstants.Brands.LUNAR_CLIENT_DEFAULT_SUFFIX
                 : suffix.trim();
+        pushLunarBrandHistory(this.lunarVersionSuffix);
+    }
+
+    /** Recently-used Lunar version suffixes, most recent first. Unmodifiable snapshot. */
+    public List<String> getLunarBrandHistory() { return List.copyOf(lunarBrandHistory); }
+
+    // Moves `suffix` to the front of the history (deduped), capped at 8 entries, so the
+    // dropdown stays useful without growing forever from one-off manual edits.
+    private void pushLunarBrandHistory(String suffix) {
+        if (lunarBrandHistory == null) lunarBrandHistory = new ArrayList<>();
+        lunarBrandHistory.removeIf(suffix::equals);
+        lunarBrandHistory.add(0, suffix);
+        while (lunarBrandHistory.size() > 8) {
+            lunarBrandHistory.remove(lunarBrandHistory.size() - 1);
+        }
     }
 
     public boolean isDpiFragmentTlsHello() { return dpiFragmentTlsHello; }
@@ -511,6 +538,11 @@ public class SpoofSettings {
         json.addProperty("spoofAsVanilla", spoofAsVanilla);
         json.addProperty("brandOverride", brandOverride.name());
         json.addProperty("lunarVersionSuffix", lunarVersionSuffix);
+        JsonArray lunarHistoryArray = new JsonArray();
+        for (String entry : lunarBrandHistory) {
+            lunarHistoryArray.add(entry);
+        }
+        json.add("lunarBrandHistory", lunarHistoryArray);
         json.addProperty("dpiFragmentTlsHello", dpiFragmentTlsHello);
         json.addProperty("accentColor", accentColor.name());
         json.addProperty("compactLayout", compactLayout);
@@ -593,7 +625,22 @@ public class SpoofSettings {
                 s.brandOverride = BrandOverride.DEFAULT;
             }
         }
-        if (json.has("lunarVersionSuffix")) s.setLunarVersionSuffix(json.get("lunarVersionSuffix").getAsString());
+        if (json.has("lunarVersionSuffix")) {
+            String suffix = json.get("lunarVersionSuffix").getAsString();
+            s.lunarVersionSuffix = (suffix == null || suffix.isBlank())
+                    ? OpsecConstants.Brands.LUNAR_CLIENT_DEFAULT_SUFFIX
+                    : suffix.trim();
+        }
+        if (json.has("lunarBrandHistory")) {
+            JsonArray lunarHistoryArray = json.getAsJsonArray("lunarBrandHistory");
+            s.lunarBrandHistory = new ArrayList<>();
+            for (int i = 0; i < lunarHistoryArray.size(); i++) {
+                s.lunarBrandHistory.add(lunarHistoryArray.get(i).getAsString());
+            }
+        } else if (json.has("lunarVersionSuffix")) {
+            // Legacy config predates history tracking — seed it from the loaded value.
+            s.pushLunarBrandHistory(s.lunarVersionSuffix);
+        }
         if (json.has("dpiFragmentTlsHello")) s.dpiFragmentTlsHello = json.get("dpiFragmentTlsHello").getAsBoolean();
         if (json.has("accentColor")) {
             try {
@@ -743,6 +790,7 @@ public class SpoofSettings {
         this.spoofAsVanilla = other.spoofAsVanilla;
         this.brandOverride = other.brandOverride;
         this.lunarVersionSuffix = other.lunarVersionSuffix;
+        this.lunarBrandHistory = new ArrayList<>(other.lunarBrandHistory);
         this.dpiFragmentTlsHello = other.dpiFragmentTlsHello;
         this.accentColor = other.accentColor;
         this.compactLayout = other.compactLayout;

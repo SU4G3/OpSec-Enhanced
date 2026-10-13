@@ -99,7 +99,7 @@
   "opsec.option.blockCookies": "Block Cookies",
   "opsec.option.blockCookies.tooltip": "Refuses to store any cookie a server tries to set on you (MC 1.20.5+). Cookies persist across reconnects and Transfer hops, making them a ready-made cross-session/cross-server tracker. On by default.",
   "opsec.option.normalizeClientInfo": "Client Information Normalizer",
-  "opsec.option.normalizeClientInfo.tooltip": "Reports a fixed, common language/view-distance/chat-mode/skin-layers/main-hand combo to the server instead of your real settings - that combination is itself a fingerprint. Off by default since it slightly affects what the server thinks your settings are.",
+  "opsec.option.normalizeClientInfo.tooltip": "Reports a fixed, common language/view-distance/chat-mode/skin-layers/main-hand combo to the server instead of your real settings - that combination is itself a fingerprint. On by default - this only changes what the server sees, not your actual client settings or language.",
   "opsec.option.lazyServerPing": "Lazy Server List Ping",
   "opsec.option.lazyServerPing.tooltip": "Stops the multiplayer screen from automatically pinging every saved server on open - each ping is a connection attempt (and an IP leak) to a server you didn't choose to join. With this on, saved servers show no MOTD/player-count preview until you actually join them. Off by default.",
   "opsec.option.commandHistoryGuard": "Command History Guard",

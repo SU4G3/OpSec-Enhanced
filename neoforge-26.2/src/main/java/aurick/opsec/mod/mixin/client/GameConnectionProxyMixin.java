@@ -53,7 +53,8 @@ public class GameConnectionProxyMixin {
 
     @Redirect(method = "connect(Ljava/net/InetSocketAddress;Lnet/minecraft/server/network/EventLoopGroupHolder;Lnet/minecraft/network/Connection;)Lio/netty/channel/ChannelFuture;",
         at = @At(value = "INVOKE", target = "Lio/netty/bootstrap/Bootstrap;connect(Ljava/net/InetAddress;I)Lio/netty/channel/ChannelFuture;"))
-    private static ChannelFuture opsec$dialProxyInstead(Bootstrap bootstrap, InetAddress address, int port) {
+    private static ChannelFuture opsec$dialProxyInstead(Bootstrap bootstrap, InetAddress address, int port,
+            InetSocketAddress origAddress, EventLoopGroupHolder group, Connection connection) {
         SpoofSettings settings = OpsecConfig.getInstance().getSettings();
         SpoofSettings.GameProxyType type = settings.getGameProxyType();
         String host = settings.getGameProxyHost();
@@ -65,6 +66,11 @@ public class GameConnectionProxyMixin {
             Opsec.LOGGER.info("[OpSec] Routing game connection via {} proxy {}:{}", type, host, settings.getGameProxyPort());
             return bootstrap.connect(proxyAddress);
         } catch (Exception e) {
+            // Clear the pending-proxy record opsec$captureTarget wrote above -- otherwise the
+            // Connection$1 pipeline injection still prepends a SOCKS5/HTTP CONNECT handshake
+            // handler onto what is now a direct connection to the real server, which doesn't
+            // speak that handshake and would hang/break the join instead of degrading cleanly.
+            PendingProxyTargets.take(connection);
             Opsec.LOGGER.error("[OpSec] Failed to resolve game proxy {}:{}, connecting directly: {}",
                 host, settings.getGameProxyPort(), e.getMessage());
             return bootstrap.connect(address, port);

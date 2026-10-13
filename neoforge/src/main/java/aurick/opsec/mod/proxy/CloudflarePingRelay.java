@@ -1,6 +1,8 @@
 package aurick.opsec.mod.proxy;
 
 import aurick.opsec.mod.Opsec;
+import aurick.opsec.mod.config.OpsecConfig;
+import aurick.opsec.mod.config.SpoofSettings;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -8,12 +10,15 @@ import com.mojang.serialization.JsonOps;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.protocol.status.ServerStatus;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.Authenticator;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.PasswordAuthentication;
+import java.net.Proxy;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -23,12 +28,19 @@ import java.util.concurrent.CompletableFuture;
  * server-status JSON through the worker instead of connecting to the target
  * server directly, then decodes it with vanilla's own {@link ServerStatus#CODEC}
  * so formatting matches whatever this build's status JSON shape actually is.
+ *
+ * <p>Only wired up for >=1.20.6 -- {@code ServerData.validateIcon}/{@code State} and
+ * {@code ServerStatusPinger.formatPlayerCount} aren't public (or don't exist) before
+ * that, and {@code ServerStatusPingerMixin} doesn't call this below 1.20.6 either.</p>
+ *
+ * <p>Uses {@link HttpURLConnection} rather than {@code java.net.http.HttpClient} so the
+ * request can be routed through the user's configured Game Connection Proxy (#11, see
+ * {@link #buildProxy}) -- {@code java.net.http.HttpClient} only honors HTTP-type proxies,
+ * not SOCKS, while {@code HttpURLConnection} supports both at the socket layer. Without
+ * this, turning on the game proxy to hide the real IP from the target server would still
+ * leak it to Cloudflare on every saved-server ping.</p>
  */
 public final class CloudflarePingRelay {
-
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(8))
-        .build();
 
     private CloudflarePingRelay() {}
 
@@ -47,18 +59,65 @@ public final class CloudflarePingRelay {
         }
 
         String query = url + "?host=" + urlEncode(host) + "&port=" + port;
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(query))
-            .timeout(Duration.ofSeconds(8))
-            .GET()
-            .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-            .thenApply(response -> applyResponse(response.body(), data))
+        return CompletableFuture.supplyAsync(() -> fetch(query))
+            .thenApply(body -> body != null && applyResponse(body, data))
             .exceptionally(e -> {
                 Opsec.LOGGER.debug("[OpSec] Cloudflare ping relay request failed: {}", e.getMessage());
                 return false;
             });
+    }
+
+    private static String fetch(String query) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(query).openConnection(buildProxy());
+            connection.setConnectTimeout(8000);
+            connection.setReadTimeout(8000);
+            connection.setRequestMethod("GET");
+            if (connection.getResponseCode() != 200) return null;
+            StringBuilder body = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) body.append(line);
+            }
+            return body.toString();
+        } catch (Exception e) {
+            Opsec.LOGGER.debug("[OpSec] Cloudflare ping relay request failed: {}", e.getMessage());
+            return null;
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    // Mirrors the proxy settings GameConnectionProxyMixin uses for the actual multiplayer
+    // connection (issue #11), so this request doesn't bypass them -- see the class javadoc.
+    private static Proxy buildProxy() {
+        SpoofSettings settings = OpsecConfig.getInstance().getSettings();
+        SpoofSettings.GameProxyType type = settings.getGameProxyType();
+        String host = settings.getGameProxyHost();
+        if (type == SpoofSettings.GameProxyType.NONE || host.isEmpty()) return Proxy.NO_PROXY;
+
+        InetSocketAddress proxyAddress = new InetSocketAddress(host, settings.getGameProxyPort());
+        String username = settings.getGameProxyUsername();
+        String password = settings.getGameProxyPassword();
+        // HttpURLConnection only consults java.net.Authenticator for proxy credentials (there's
+        // no per-connection API for it) -- scoped to RequestorType.PROXY so it never answers an
+        // unrelated server-side auth challenge. Always re-set to match current settings exactly
+        // (including clearing it when no username is configured) so a previous proxy's leftover
+        // credentials can never be offered to a different proxy after the user changes settings.
+        Authenticator.setDefault(username.isEmpty() ? null : new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                if (getRequestorType() != RequestorType.PROXY) return null;
+                return new PasswordAuthentication(username, password.toCharArray());
+            }
+        });
+
+        return new Proxy(
+            type == SpoofSettings.GameProxyType.HTTP ? Proxy.Type.HTTP : Proxy.Type.SOCKS,
+            proxyAddress);
     }
 
     private static boolean applyResponse(String body, ServerData data) {

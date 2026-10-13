@@ -111,7 +111,7 @@ If settings are changed while connected to a server it is recommended to reconne
 | **Disable Telemetry** | Enable/disable [telemetry blocking](#telemetry-blocking) |
 | **Command History Guard** | Enable/disable [command history redaction](#command-history-guard) (default: on) |
 | **Block Cookies** | Enable/disable [cookie blocking](#block-cookies) (MC 1.20.5+, default: on) |
-| **Client Information Normalizer** | Enable/disable [reporting a fixed common client info combo](#client-information-normalizer) (default: off) |
+| **Client Information Normalizer** | Enable/disable [reporting a fixed common client info combo](#client-information-normalizer) (default: on) |
 | **Scrub Pack Download Headers** | Enable/disable [neutralizing per-player pack-download headers](#scrub-pack-download-headers) (MC 1.20.3+, default: on) |
 | **Auto-Purge Pack Cache On Exit** | Enable/disable [wiping the pack cache on game close](#auto-purge-pack-cache-on-exit) (default: off) |
 | **Lazy Server List Ping** | Enable/disable [skipping the automatic multiplayer-list ping](#lazy-server-list-ping) (default: off) |
@@ -204,7 +204,7 @@ While Client Spoofer is on, you can pick which brand string OpSec advertises ins
 | Option | Brand sent | Channel behavior | Notes |
 |--------|-----------|-------------------|-------|
 | **Vanilla** (default) | `vanilla` | Identical to real vanilla | Always accurate, accepted by any server that allows vanilla clients at all |
-| **Lunar Client** | `lunarclient:v<version>,fabric` | Identical to vanilla mode (all mod channels blocked) | Lunar's own client uses this vanilla-like network behavior to pass anti-cheat brand checks. OpSec does **not** implement Lunar's proprietary cosmetics protocol behind the `lunarclient:pm` channel some server plugins also check for, so a server doing that specific check may still notice. The version suffix (default `v1.21.11-704,fabric`) is a point-in-time snapshot and will go stale as Lunar ships new builds — edit `lunarVersionSuffix` in `opsec.json` to update it |
+| **Lunar Client** | `lunarclient:v<version>,fabric` | Identical to vanilla mode (all mod channels blocked) | Lunar's own client uses this vanilla-like network behavior to pass anti-cheat brand checks. OpSec does **not** implement Lunar's proprietary cosmetics protocol behind the `lunarclient:pm` channel some server plugins also check for, so a server doing that specific check may still notice. The version suffix follows Lunar's own release-line scheme (`v<lunar-version>-<year><week>`, e.g. `v2.22.1-2620` — not the Minecraft version) and is a point-in-time snapshot that will go stale as Lunar ships new builds; edit it from **Configure Lunar Version...** next to the Spoof As dropdown, which also keeps a history of recently-used values to pick from instead of hand-editing `opsec.json` |
 | **Badlion Client** | `badlion` | Identical to vanilla mode (all mod channels blocked) | Badlion doesn't register its own plugin channels either, and its brand pattern has no version component, so this option can't go stale the way Lunar's can |
 
 **Why these and not others:** every option here only changes the outbound brand *string* — the underlying channel/known-pack/key-resolution behavior is always identical to plain vanilla mode, because that's what these two clients are documented to actually do on the wire (see [AntiSpoof](https://modrinth.com/plugin/antispoof)'s brand-pattern config and [lunarclient.dev/client-brand](https://lunarclient.dev/client-brand)). Getting this wrong — advertising a brand a server can then contradict via a follow-up check — is worse than not spoofing at all, so OpSec deliberately does not invent channel registrations or protocol responses it can't actually back up. These options only help against a server that denies the generic `vanilla` brand but allowlists specific "known" clients by name; that's an uncommon configuration, so Vanilla remains the safer default for most servers.
@@ -242,7 +242,7 @@ Every client sends a `ClientInformation` packet on join (language, view distance
 
 When enabled, OpSec replaces the entire outgoing `ClientInformation` with a common baseline (`en_us`, chat FULL, all skin layers on, text filtering off, listing on) instead of whatever you actually have configured. These are vanilla's real fresh-install defaults, not `ClientInformation.createDefault()`'s internal fallback (which reports an unrealistic view distance of 2 and all skin layers off — reporting that would stand out *more* than reporting nothing, same as bad brand spoofing would). View distance and main hand are picked once per game launch from realistic weighted distributions (view distance mostly 10, occasionally 8/12/16; main hand ~90% right / ~10% left) instead of one fixed value for every install — a single universal combination is itself a cross-user fingerprint, since every OpSec client would otherwise report the exact same thing.
 
-Off by default, since it does mean the server's view of your settings won't match reality (chat visibility mainly — no gameplay-breaking effect either way).
+On by default — this only changes what the server sees, not your actual client settings or language. The one visible trade-off is the server's view of your chat visibility/settings not matching reality (mainly chat visibility — no gameplay-breaking effect either way).
 
 ---
 

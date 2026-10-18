@@ -1,17 +1,10 @@
 ---
 name: Bug report
 about: Report a bug in OpSec Enhanced
-title: "(Bug) "
+title: "[BUG] "
 labels: ''
 assignees: ''
 
----
-
----
-name: Bug report
-about: Report a bug in OpSec Enhanced
-title: "[Bug] "
-labels: bug
 ---
 
 <!--

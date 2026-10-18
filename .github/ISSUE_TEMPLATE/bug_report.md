@@ -2,7 +2,7 @@
 name: Bug report
 about: Report a bug in OpSec Enhanced
 title: "[BUG] "
-labels: bug, enhancement
+labels: bug
 assignees: SU4G3
 type: Bug
 

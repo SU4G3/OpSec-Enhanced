@@ -1,15 +1,6 @@
 package aurick.opsec.mod.util;
 
-import aurick.opsec.mod.Opsec;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import aurick.opsec.mod.tracking.ModRegistry;
 
 /**
  * The game's own built-in {@code en_us.json}, loaded independently of the player's actual
@@ -23,40 +14,25 @@ import java.util.Map;
  * unless something else intervenes. Resolving those specific lookups against this table
  * instead keeps the normalizer's language claim consistent with what a server can actually
  * observe, without touching the player's own non-packet-originated UI.</p>
+ *
+ * <p>Delegates to {@link ModRegistry#getVanillaEnUsValue}, which is populated from the real
+ * vanilla-pack resource stack during normal language loading ({@code ClientLanguageMixin}).
+ * This previously loaded a bundled copy via
+ * {@code Class.getResourceAsStream("/assets/minecraft/lang/en_us.json")}, which only ever
+ * found anything in a Loom dev workspace (Loom merges assets into the same jar as the
+ * compiled classes there for convenience) — a real production launch never bundles assets
+ * that way, so the lookup silently returned nothing for every real user, and every
+ * normalized vanilla-key lookup fell back to the raw key itself and got flagged as a
+ * fingerprinting probe that never happened (issue #25).</p>
  */
 public final class VanillaEnUsLanguage {
-
-    private static volatile Map<String, String> table;
 
     private VanillaEnUsLanguage() {
     }
 
-    /** Returns the built-in en_us value for {@code key}, or {@code fallback} if absent. */
+    /** Returns the built-in en_us value for {@code key}, or {@code fallback} if not yet captured. */
     public static String get(String key, String fallback) {
-        Map<String, String> loaded = table;
-        if (loaded == null) {
-            loaded = load();
-            table = loaded;
-        }
-        String value = loaded.get(key);
+        String value = ModRegistry.getVanillaEnUsValue(key);
         return value != null ? value : fallback;
-    }
-
-    private static Map<String, String> load() {
-        try (InputStream in = VanillaEnUsLanguage.class.getResourceAsStream("/assets/minecraft/lang/en_us.json")) {
-            if (in == null) {
-                Opsec.LOGGER.debug("[OpSec] Built-in en_us.json not found on classpath");
-                return Collections.emptyMap();
-            }
-            JsonObject json = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject();
-            Map<String, String> map = new HashMap<>();
-            for (String key : json.keySet()) {
-                map.put(key, json.get(key).getAsString());
-            }
-            return map;
-        } catch (Exception e) {
-            Opsec.LOGGER.debug("[OpSec] Failed to load built-in en_us.json: {}", e.getMessage());
-            return Collections.emptyMap();
-        }
     }
 }

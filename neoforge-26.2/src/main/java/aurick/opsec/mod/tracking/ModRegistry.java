@@ -49,6 +49,21 @@ public class ModRegistry {
     private static volatile Map<String, String> serverPackTranslations =
         new ConcurrentHashMap<>();
 
+    /**
+     * Vanilla's own {@code en_us} key → value pairs specifically, independent of the
+     * player's actually-selected language. Captured from the real vanilla-pack resource
+     * stack during the normal language-reload scan ({@link ClientLanguageMixin}), not
+     * loaded separately — a from-scratch classpath resource load
+     * ({@code Class.getResourceAsStream("/assets/minecraft/lang/en_us.json")}) only finds
+     * anything in a Loom dev workspace, where Loom happens to merge assets into the same
+     * jar as the compiled classes for convenience; a real production launch never bundles
+     * assets that way, so that approach silently returned nothing for every real user and
+     * made every normalized vanilla-key lookup look like a fingerprinting probe (issue #25).
+     * Atomic-swapped per reload, same rationale as {@link #vanillaTranslationKeys}.
+     */
+    private static volatile Map<String, String> vanillaEnUsValues =
+        new ConcurrentHashMap<>();
+
     /** Maps channel namespaces to their owning Fabric mod IDs (e.g., "jm" -> "journeymap") */
     private static final Map<String, Set<String>> namespaceToModIds =
         new ConcurrentHashMap<>();
@@ -218,6 +233,7 @@ public class ModRegistry {
         final Set<String> vanilla = ConcurrentHashMap.newKeySet();
         final Map<String, String> serverPackTranslations = new ConcurrentHashMap<>();
         final Map<String, String> translationKeyToModId = new ConcurrentHashMap<>();
+        final Map<String, String> vanillaEnUs = new ConcurrentHashMap<>();
     }
 
     /**
@@ -256,15 +272,16 @@ public class ModRegistry {
     public static void commitTranslationRebuild() {
         TranslationRebuildStaging s = rebuildStaging.get();
         if (s == null) return;
-        // Three volatile writes — each is independently atomic; readers always
+        // Four volatile writes — each is independently atomic; readers always
         // see a fully-populated set/map (either the old or the new one).
         vanillaTranslationKeys = s.vanilla;
         serverPackTranslations = s.serverPackTranslations;
         translationKeyToModId = s.translationKeyToModId;
+        vanillaEnUsValues = s.vanillaEnUs;
         rebuildStaging.remove();
         Opsec.LOGGER.debug(
-            "[ModRegistry] Committed translation rebuild: {} vanilla, {} server pack",
-            s.vanilla.size(), s.serverPackTranslations.size()
+            "[ModRegistry] Committed translation rebuild: {} vanilla, {} server pack, {} en_us",
+            s.vanilla.size(), s.serverPackTranslations.size(), s.vanillaEnUs.size()
         );
     }
 
@@ -338,6 +355,26 @@ public class ModRegistry {
      */
     public static boolean isVanillaTranslationKey(String key) {
         return key != null && vanillaTranslationKeys.contains(key);
+    }
+
+    /**
+     * Record vanilla's own {@code en_us} value for {@code key}, captured from the real
+     * vanilla-pack resource stack (see {@link #vanillaEnUsValues}'s javadoc for why this
+     * must come from here rather than a separate classpath resource load).
+     */
+    public static void recordVanillaEnUsValue(String key, String value) {
+        if (key == null || value == null) return;
+        TranslationRebuildStaging s = rebuildStaging.get();
+        if (s != null) {
+            s.vanillaEnUs.put(key, value);
+        } else {
+            vanillaEnUsValues.put(key, value);
+        }
+    }
+
+    /** Vanilla's own {@code en_us} value for {@code key}, or {@code null} if not captured (yet). */
+    public static String getVanillaEnUsValue(String key) {
+        return key != null ? vanillaEnUsValues.get(key) : null;
     }
 
     /**

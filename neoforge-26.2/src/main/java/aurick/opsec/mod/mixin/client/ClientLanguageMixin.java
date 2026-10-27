@@ -100,14 +100,24 @@ public class ClientLanguageMixin {
             BiConsumer<String, String> output,
             BiConsumer<String, net.minecraft.network.chat.Component> descriptions,
             Operation<Void> original,
-            @Local Resource resource) {
+            @Local Resource resource,
+            @Local(ordinal = 0) String id) {
 
         PackResources pack = resource.source();
 
         // Vanilla pack - always whitelist
         if (pack instanceof VanillaPackResources) {
+            // Also capture en_us specifically — see ModRegistry.vanillaEnUsValues's
+            // javadoc (issue #25): the Client Information Normalizer needs vanilla's
+            // real en_us text regardless of the player's actually-selected language,
+            // and this resource-stack scan is the only reliable way to get it (a
+            // from-scratch classpath resource load only works in a Loom dev workspace).
+            boolean isEnUs = "en_us".equals(id);
             original.call(stream, (BiConsumer<String, String>) (key, value) -> {
                 ModRegistry.recordVanillaTranslationKey(key);
+                if (isEnUs) {
+                    ModRegistry.recordVanillaEnUsValue(key, value);
+                }
                 output.accept(key, value);
             }, descriptions);
             return;

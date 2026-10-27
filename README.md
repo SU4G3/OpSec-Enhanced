@@ -114,6 +114,7 @@ If settings are changed while connected to a server it is recommended to reconne
 | **Client Information Normalizer** | Enable/disable [reporting a fixed common client info combo](#client-information-normalizer) (default: on) |
 | **Scrub Pack Download Headers** | Enable/disable [neutralizing per-player pack-download headers](#scrub-pack-download-headers) (MC 1.20.3+, default: on) |
 | **Auto-Purge Pack Cache On Exit** | Enable/disable [wiping the pack cache on game close](#auto-purge-pack-cache-on-exit) (default: off) |
+| **Trust This Server (Skip Auto-Purge)** | Per-server (Server Profile section): [exempt this server's pack-cache bucket](#auto-purge-pack-cache-on-exit) from Auto-Purge (default: off) |
 | **Lazy Server List Ping** | Enable/disable [skipping the automatic multiplayer-list ping](#lazy-server-list-ping) (default: off) |
 | **Cloudflare Ping Relay** | Only shown while Lazy Server List Ping is on. Backs saved-server pings with a self-hosted [Cloudflare Worker relay](#cloudflare-ping-relay) instead of just skipping them (default: off) |
 | **Game Connection Proxy** | Route the actual multiplayer connection through **SOCKS5**, **HTTP**, or **Off** (default). See [Game Connection Proxy](#game-connection-proxy) |
@@ -273,6 +274,8 @@ On by default (MC 1.20.2+, when `CommandHistory` was introduced — older versio
 When enabled, OpSec wipes `downloads/` and `server-resource-packs/` on client shutdown, reusing the same cache-clearing logic as the manual **Clear Cache** button.
 
 Off by default — packs simply re-download next time you connect.
+
+**Trust This Server (Skip Auto-Purge)** (per-server, in the Server Profile section): exempts the currently-connected server's isolated pack-cache bucket from this purge, independent of the Auto-Purge toggle itself (global or per-server-profile). Use it for a server you trust enough to want pack caching to actually persist across sessions, without turning off the purge for everyone else.
 
 ---
 

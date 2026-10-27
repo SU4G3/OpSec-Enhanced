@@ -1,0 +1,68 @@
+name: Compatibility report
+description: OpSec conflicts with another mod, launcher, or server software
+title: "[COMPAT] "
+labels: ["mod-compatibility", "status: needs-triage"]
+assignees:
+  - SU4G3
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [Known Issues](https://github.com/SU4G3/OpSec-Enhanced#known-issues) first — Lunar Client, Sinytra Connector and a few others have documented gaps already.
+
+        **Never paste tokens, account data, IPs or proxy credentials.**
+
+  - type: input
+    id: other_thing
+    attributes:
+      label: Conflicting mod / launcher / server software
+      placeholder: e.g. Meteor Client 0.5.x, Lunar Client, Sinytra Connector, Paper 1.21.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: loader
+    attributes:
+      label: Loader
+      options:
+        - Fabric
+        - NeoForge
+    validations:
+      required: true
+
+  - type: input
+    id: mc_version
+    attributes:
+      label: Minecraft version
+    validations:
+      required: true
+
+  - type: input
+    id: mod_version
+    attributes:
+      label: OpSec Enhanced version
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What goes wrong
+      description: What happens, and what you'd expect instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+    validations:
+      required: false

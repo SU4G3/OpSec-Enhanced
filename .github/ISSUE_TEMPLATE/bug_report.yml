@@ -1,0 +1,187 @@
+name: Bug report
+description: Report a bug in OpSec Enhanced
+title: "[BUG] "
+labels: ["bug", "status: needs-triage"]
+assignees:
+  - SU4G3
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: check [Known Issues](https://github.com/SU4G3/OpSec-Enhanced#known-issues) first — it may already be documented.
+
+        **Never paste session/refresh tokens or `opsec-accounts*.json`.** Redact usernames, server addresses, IPs and proxy credentials.
+
+        > [!WARNING]
+        > If this is a **privacy leak** (the mod fails to hide something it claims to hide), do **not** report it here — use a [Security Advisory](https://github.com/SU4G3/OpSec-Enhanced/security/advisories/new) instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature
+    attributes:
+      label: Affected feature
+      multiple: true
+      options:
+        - Client Spoofer / Spoof As (Lunar / Badlion)
+        - Channel Spoofing / Known-Pack Filtering
+        - Isolate Pack Cache / Per-Server Isolation / Auto-Purge
+        - Block Local URLs / Scrub Pack Download Headers
+        - Bypass Server Pack Requirement / Strip Mod Shader Overrides
+        - Key Resolution Protection / Meteor Fix
+        - Mod Whitelist
+        - Chat Signing Control
+        - Chat Link/Command Guard / Command History Guard
+        - Account Manager (login, import/export, encrypted storage)
+        - Telemetry Blocking / Block Cookies / Client Information Normalizer
+        - Lazy Server List Ping / Cloudflare Ping Relay
+        - Game Connection Proxy / DPI Evasion (TLS Fragmentation)
+        - Streamer Mode
+        - Settings screen / HUD indicator
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: To reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: dropdown
+    id: loader
+    attributes:
+      label: Loader
+      options:
+        - Fabric
+        - NeoForge
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mc_version
+    attributes:
+      label: Minecraft version
+      options:
+        - "1.20 - 1.20.1"
+        - "1.20.2"
+        - "1.20.3 - 1.20.4"
+        - "1.20.5 - 1.20.6"
+        - "1.21 - 1.21.1"
+        - "1.21.2 - 1.21.5"
+        - "1.21.6 - 1.21.8"
+        - "1.21.9 - 1.21.10"
+        - "1.21.11"
+        - "26.1 - 26.1.2"
+        - "26.2"
+        - "26.3"
+        - Other / not listed
+    validations:
+      required: true
+
+  - type: input
+    id: mod_version
+    attributes:
+      label: OpSec Enhanced version
+      placeholder: e.g. 1.9.0
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: Jar downloaded from
+      placeholder: Modrinth / CurseForge / GitHub Releases / other
+    validations:
+      required: true
+
+  - type: input
+    id: java
+    attributes:
+      label: Java version
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+    validations:
+      required: false
+
+  - type: input
+    id: launcher
+    attributes:
+      label: Launcher
+      placeholder: Official launcher / Prism / MultiMC / CurseForge app / other
+    validations:
+      required: false
+
+  - type: textarea
+    id: other_mods
+    attributes:
+      label: Other mods installed
+      description: Mods that may interact with OpSec (Meteor Client, Mod Menu, No Chat Reports, ViaFabric...) or attach the full list.
+    validations:
+      required: false
+
+  - type: textarea
+    id: server
+    attributes:
+      label: Server (if relevant)
+      placeholder: |
+        Server software/version (or "singleplayer"):
+        Game Connection Proxy / Cloudflare Ping Relay enabled? (yes / no):
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Config
+      description: Relevant parts of `config/opsec.json`. Remove tokens, account data and proxy credentials first.
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Attach `logs/latest.log` or a crash report. For detection issues enable "Log Detections" in the Miscellaneous tab first. Redact tokens and IPs.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+    validations:
+      required: false

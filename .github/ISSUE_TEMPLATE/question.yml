@@ -1,0 +1,71 @@
+name: Question / Other
+description: Question, documentation issue, translation, or anything else
+title: "[OTHER] "
+labels: ["question", "status: needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [README](https://github.com/SU4G3/OpSec-Enhanced#readme) and [Known Issues](https://github.com/SU4G3/OpSec-Enhanced#known-issues) first.
+
+        **Never paste session/refresh tokens or `opsec-accounts*.json`.** Redact usernames, server addresses, IPs and proxy credentials.
+
+        > [!WARNING]
+        > Privacy leaks (the mod fails to hide something it claims to hide) must be reported privately via a [Security Advisory](https://github.com/SU4G3/OpSec-Enhanced/security/advisories/new), not here.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Question / how do I...
+        - Documentation issue / typo
+        - Translation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What do you want to ask, report or discuss?
+    validations:
+      required: true
+
+  - type: input
+    id: area
+    attributes:
+      label: Related area
+      description: Optional. Feature or setting this is about (e.g. Mod Whitelist, Account Manager, Game Connection Proxy).
+    validations:
+      required: false
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Optional. Docs you read, settings you changed, other issues you checked.
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Optional, but helpful for compatibility questions.
+      placeholder: |
+        OpSec Enhanced version:
+        Loader + version (Fabric / NeoForge):
+        Minecraft version:
+        Other relevant mods / server:
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, screenshots, logs (redact tokens and IPs).
+    validations:
+      required: false

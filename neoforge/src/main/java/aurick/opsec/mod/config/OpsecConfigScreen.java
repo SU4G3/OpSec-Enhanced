@@ -84,16 +84,23 @@ public class OpsecConfigScreen extends Screen {
     // see their surrounding comments). MC 26.3 switched windowing from GLFW to
     // SDL, dropping the lwjgl-glfw module this used to query with, so this one
     // shared helper absorbs that split instead of repeating it at every call site.
+    //
+    // Uses Minecraft's own stored window handle (Window.getWindow()), not
+    // GLFW.glfwGetCurrentContext() -- the latter is thread-bound (returns the
+    // context current on the CALLING thread) and comes back NULL when this runs
+    // from the state-extraction pass some renderers (notably Vulkan) perform off
+    // the thread that owns the GL/Vulkan context, which crashed glfwGetMouseButton
+    // with a NullPointerException inside LWJGL's own arg validation (issue #22).
     private static boolean opsec$isLeftMouseButtonDown() {
         //? if >=26.3 {
         /*return (org.lwjgl.sdl.SDLMouse.SDL_GetMouseState(null, null) & org.lwjgl.sdl.SDLMouse.SDL_BUTTON_LMASK) != 0;*/
         //?} else {
-        long windowHandle = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
+        long windowHandle = Minecraft.getInstance().getWindow().getWindow();
         return org.lwjgl.glfw.GLFW.glfwGetMouseButton(windowHandle, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
         //?}
     }
 
-    /** Raw screen-space cursor position (unscaled by GUI scale) — see {@link #opsec$isLeftMouseButtonDown()} for the GLFW/SDL split rationale. */
+    /** Raw screen-space cursor position (unscaled by GUI scale) — see {@link #opsec$isLeftMouseButtonDown()} for the GLFW/SDL split and thread-safety rationale. */
     private static double[] opsec$getCursorPos() {
         //? if >=26.3 {
         /*try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -103,7 +110,7 @@ public class OpsecConfigScreen extends Screen {
             return new double[]{x.get(0), y.get(0)};
         }*/
         //?} else {
-        long windowHandle = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
+        long windowHandle = Minecraft.getInstance().getWindow().getWindow();
         double[] mx = new double[1], my = new double[1];
         org.lwjgl.glfw.GLFW.glfwGetCursorPos(windowHandle, mx, my);
         return new double[]{mx[0], my[0]};
@@ -557,6 +564,17 @@ public class OpsecConfigScreen extends Screen {
                         } else {
                             config.removeServerProfile();
                         }
+                        refreshScreen();
+                    }));
+
+            // Issue #23: exempts this specific server's isolated pack cache bucket from
+            // Auto-Purge Pack Cache On Exit, independent of the (global or per-server-
+            // profile) Auto-Purge toggle above -- see OpsecConfig#packCacheTrustedServers.
+            widgets.add(cycleBuilder(COLORED_BOOL_TO_TEXT, List.of(Boolean.TRUE, Boolean.FALSE), config.isCurrentServerPackCacheTrusted())
+                    .withTooltip(v -> Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_PACK_CACHE_TRUST)))
+                    .create(0, 0, 230, 20, OpsecLang.component(OpsecStrings.OPTION_PACK_CACHE_TRUST),
+                    (button, value) -> {
+                        config.setCurrentServerPackCacheTrusted(value);
                         refreshScreen();
                     }));
         }

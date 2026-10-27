@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import aurick.opsec.mod.util.NeoCompat;
 
@@ -77,6 +78,15 @@ public class OpsecConfig {
     private SpoofSettings defaultSettings = new SpoofSettings();
     private volatile SpoofSettings settings = defaultSettings;
     private final Map<String, SpoofSettings> serverProfiles = new ConcurrentHashMap<>();
+
+    // Servers explicitly exempted from Auto-Purge Pack Cache On Exit (issue #23).
+    // Deliberately a separate, lightweight set rather than a SpoofSettings field on
+    // a full server profile: a per-server profile overrides every spoof setting for
+    // that server and gets reverted to defaultSettings on disconnect (setCurrentServer),
+    // so it's gone again well before CLIENT_STOPPING's purge check ever runs. This set
+    // is checked directly by address at purge time instead, independent of whether
+    // anything is still "connected" by then -- see ResourcePackGuard.clearAllCaches.
+    private final Set<String> packCacheTrustedServers = ConcurrentHashMap.newKeySet();
 
     private volatile String currentServer = null;
     private volatile boolean serverConnected = false;
@@ -170,6 +180,13 @@ public class OpsecConfig {
                 }
             }
 
+            packCacheTrustedServers.clear();
+            if (json.has("packCacheTrustedServers")) {
+                for (com.google.gson.JsonElement e : json.getAsJsonArray("packCacheTrustedServers")) {
+                    packCacheTrustedServers.add(e.getAsString());
+                }
+            }
+
             if (!validateAndCorrectSettings(defaultSettings)) {
                 Opsec.LOGGER.warn(
                     "[OpSec] Config validation failed, resetting to defaults"
@@ -208,6 +225,7 @@ public class OpsecConfig {
         defaultSettings = new SpoofSettings();
         settings = defaultSettings;
         serverProfiles.clear();
+        packCacheTrustedServers.clear();
     }
 
     /**
@@ -285,6 +303,12 @@ public class OpsecConfig {
                 profilesJson.add(entry.getKey(), entry.getValue().toJson());
             }
             json.add("serverProfiles", profilesJson);
+
+            com.google.gson.JsonArray trustedServersJson = new com.google.gson.JsonArray();
+            for (String address : packCacheTrustedServers) {
+                trustedServersJson.add(address);
+            }
+            json.add("packCacheTrustedServers", trustedServersJson);
 
             Files.createDirectories(CONFIG_PATH.getParent());
 
@@ -369,6 +393,27 @@ public class OpsecConfig {
         serverProfiles.remove(currentServer);
         this.settings = defaultSettings;
         save();
+    }
+
+    /** True when the currently-connected server is exempted from Auto-Purge Pack Cache On Exit. */
+    public boolean isCurrentServerPackCacheTrusted() {
+        return serverConnected && packCacheTrustedServers.contains(currentServer);
+    }
+
+    /** Adds or removes the connected server from the pack-cache purge exemption list. */
+    public void setCurrentServerPackCacheTrusted(boolean trusted) {
+        if (!serverConnected) return;
+        if (trusted) {
+            packCacheTrustedServers.add(currentServer);
+        } else {
+            packCacheTrustedServers.remove(currentServer);
+        }
+        save();
+    }
+
+    /** Snapshot of every server address currently exempted from Auto-Purge Pack Cache On Exit. */
+    public Set<String> getPackCacheTrustedServers() {
+        return Set.copyOf(packCacheTrustedServers);
     }
 
     // Identity protection

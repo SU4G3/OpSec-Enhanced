@@ -54,6 +54,8 @@
   "opsec.section.serverProfile": "§f§lServer Profile (%s)",
   "opsec.option.serverProfile": "Custom Profile For This Server",
   "opsec.option.serverProfile.tooltip": "ON: save a snapshot of your current settings just for this server address, editable independently of your global defaults. OFF: delete the snapshot and go back to your global defaults. Only shown while the config screen is opened with an active connection (e.g. via Mod Menu's in-game menu) - the multiplayer-list button opens before any server is chosen.",
+  "opsec.option.packCacheTrust": "Trust This Server (Skip Auto-Purge)",
+  "opsec.option.packCacheTrust.tooltip": "ON: exempt this server's isolated pack cache from Auto-Purge Pack Cache On Exit, so a trusted private server's resource pack doesn't get re-downloaded on every launch. OFF: this server's cache gets purged along with everything else. Independent of the Auto-Purge toggle and of any per-server profile above.",
   "opsec.option.whitelistMode": "Whitelist Mode",
   "opsec.option.whitelistMode.locked.tooltip": "Locked to 'Block All' because Spoof as Vanilla is on",
   "opsec.whitelist.search": "Search",

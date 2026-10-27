@@ -72,6 +72,8 @@ public final class OpsecStrings {
     public static final String SECTION_SERVER_PROFILE = "opsec.section.serverProfile";
     public static final String OPTION_SERVER_PROFILE = "opsec.option.serverProfile";
     public static final String TOOLTIP_SERVER_PROFILE = "opsec.option.serverProfile.tooltip";
+    public static final String OPTION_PACK_CACHE_TRUST = "opsec.option.packCacheTrust";
+    public static final String TOOLTIP_PACK_CACHE_TRUST = "opsec.option.packCacheTrust.tooltip";
 
     public static final String OPTION_WHITELIST_MODE = "opsec.option.whitelistMode";
     public static final String OPTION_WHITELIST_MODE_LOCKED_TOOLTIP = "opsec.option.whitelistMode.locked.tooltip";
@@ -342,5 +344,4 @@ public final class OpsecStrings {
     public static final String TOOLTIP_STREAMER_NAME_STYLE = "opsec.option.streamerNameStyle.tooltip";
     public static final String NAME_STYLE_HIDDEN = "opsec.option.streamerNameStyle.hidden";
     public static final String NAME_STYLE_GLYPHS = "opsec.option.streamerNameStyle.glyphs";
-
 }

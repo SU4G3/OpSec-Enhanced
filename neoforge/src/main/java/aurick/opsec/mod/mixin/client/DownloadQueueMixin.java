@@ -12,10 +12,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.util.HexFormat;
 import java.util.UUID;
 
 /**
@@ -71,17 +68,13 @@ public class DownloadQueueMixin {
         return isolatedPath;
     }
 
+    // Delegates to ResourcePackGuard.hashServerBucket -- single source of truth for
+    // this hash, since ResourcePackGuard's Auto-Purge exemption (issue #23) has to
+    // reproduce the exact same bucket name from a bare server address to know which
+    // on-disk folder to preserve.
     private static String opsec$serverBucket() {
-        String server = OpsecConfig.getInstance().getCurrentServer();
-        if (server == null || server.isBlank()) return "unknown";
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(server.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hash, 0, 8); // 16 hex chars — plenty to avoid collisions, short for a path segment
-        } catch (Exception e) {
-            Opsec.LOGGER.debug("[OpSec] Failed to hash server address for cache bucketing: {}", e.getMessage());
-            return "unknown";
-        }
+        return aurick.opsec.mod.protection.ResourcePackGuard.hashServerBucket(
+            OpsecConfig.getInstance().getCurrentServer());
     }
 }
 //?} else {

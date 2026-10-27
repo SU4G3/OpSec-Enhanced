@@ -44,6 +44,8 @@
   "opsec.section.serverProfile": "§f§lServer Profile (%s)",
   "opsec.option.serverProfile": "Custom na Profile Para sa Server na Ito",
   "opsec.option.serverProfile.tooltip": "ON: mag-save ng snapshot ng kasalukuyang settings mo para lang sa address ng server na ito, na puwedeng i-edit nang hiwalay sa global defaults mo. OFF: burahin ang snapshot at bumalik sa global defaults mo. Lalabas lang habang bukas ang config screen na may aktibong koneksyon (hal. sa pamamagitan ng in-game menu ng Mod Menu) - bumubukas ang button sa multiplayer-list bago pa man pumili ng server.",
+  "opsec.option.packCacheTrust": "Pagkatiwalaan Ang Server na Ito (Laktawan ang Auto-Purge)",
+  "opsec.option.packCacheTrust.tooltip": "ON: ibukod ang isolated pack cache ng server na ito sa Auto-Purge Pack Cache On Exit, para hindi na mag-re-download ulit ang resource pack ng trusted private server mo sa bawat launch. OFF: ma-purge din ang cache ng server na ito kasama ang lahat. Hiwalay sa Auto-Purge toggle at sa anumang per-server profile sa itaas.",
   "opsec.option.whitelistMode": "Whitelist Mode",
   "opsec.option.whitelistMode.locked.tooltip": "Naka-lock sa 'Block All' dahil naka-on ang Spoof as Vanilla",
   "opsec.whitelist.search": "Maghanap",

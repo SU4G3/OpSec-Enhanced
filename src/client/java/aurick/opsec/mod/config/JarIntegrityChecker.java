@@ -65,6 +65,18 @@ public final class JarIntegrityChecker {
     public static void checkIntegrity() {
         CompletableFuture.runAsync(() -> {
             try {
+                // Sinytra Connector (mod id "connector") runs Fabric mods on NeoForge/Forge
+                // by presenting its own translated/repackaged representation of each mod
+                // through the FabricLoader API it provides, not the pristine original file —
+                // so getModContainer(...).getOrigin() below can legitimately point at bytes
+                // that differ from the published release despite nothing being wrong. There's
+                // nothing to usefully verify in that case, only a guaranteed false positive
+                // (issue #24), so skip entirely rather than report a misleading mismatch.
+                if (FabricLoader.getInstance().getModContainer("connector").isPresent()) {
+                    Opsec.LOGGER.debug("[OpSec] Running under Sinytra Connector, skipping integrity check (self-hash isn't meaningful under its translation layer)");
+                    return;
+                }
+
                 Path jarPath = FabricLoader.getInstance()
                         .getModContainer(Opsec.MOD_ID)
                         .flatMap(mod -> mod.getOrigin().getPaths().stream().findFirst())

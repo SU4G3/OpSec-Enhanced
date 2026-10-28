@@ -125,7 +125,7 @@ public abstract class TranslatableContentsMixin implements OpsecFromPacketAccess
             // instead, so the claim holds up against that specific probe.
             if (settings.isNormalizeClientInfo()) {
                 String enUsValue = aurick.opsec.mod.util.VanillaEnUsLanguage.get(translationKey, defaultValue);
-                opsec$logBlocked(translationKey, enUsValue);
+                opsec$logNormalized(translationKey, enUsValue);
                 return enUsValue;
             }
             opsec$reportPassthrough(translationKey, defaultValue);
@@ -184,6 +184,22 @@ public abstract class TranslatableContentsMixin implements OpsecFromPacketAccess
             TranslationProtectionHandler.sendDetailDebug(InterceptionType.TRANSLATION, translationKey, originalValue, defaultValue);
         }
         TranslationProtectionHandler.logDetection(InterceptionType.TRANSLATION, translationKey, originalValue, defaultValue);
+    }
+
+    /**
+     * Log the Client Information Normalizer's deliberate en_us override.
+     * Unlike {@link #opsec$logBlocked}, this never compares against the player's live
+     * locale — the Normalizer intentionally serves en_us regardless of locale, so that
+     * comparison would differ (and fire a false "probe detected") on essentially every
+     * string for any non-en_us player, which is the feature working as intended, not
+     * a probe.
+     */
+    @Unique
+    private void opsec$logNormalized(String translationKey, String enUsValue) {
+        if (opsec$silent || opsec$reported) return;
+        opsec$reported = true;
+        TranslationProtectionHandler.sendDetailDebug(InterceptionType.TRANSLATION, translationKey, enUsValue, enUsValue);
+        TranslationProtectionHandler.logDetection(InterceptionType.TRANSLATION, translationKey, enUsValue, enUsValue);
     }
 
     /** Pack-defined value when present (independent of storage merge order), else {@code defaultValue}. */

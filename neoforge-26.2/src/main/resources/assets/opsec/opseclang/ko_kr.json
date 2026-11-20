@@ -102,6 +102,8 @@
   "opsec.alert.portscan.summary.more": " 외 +%d건",
   "opsec.alert.keyresolution": "키 해석 탐지 시도가 감지되었습니다",
   "opsec.toast.keyresolution": "키 해석 탐지 시도 감지됨",
+  "opsec.alert.aep.ghostSign": "서버가 고스트 사인(AntiExploitPreventer)으로 클라이언트를 조사했습니다. 프로브를 탐지했으며, 모드 키는 계속 숨겨져 있습니다.",
+  "opsec.toast.aep.probing": "서버 프로브 탐지",
   "opsec.hint.alertsCanBeDisabled": "채팅 및 토스트 알림은 OpSec > 기타 설정에서 비활성화할 수 있습니다.",
   "opsec.command.help.header": "OpSec 명령어",
   "opsec.command.help.info": "/opsec info [mod]  - 추적 중인 모드 목록 또는 특정 모드의 세부 정보 표시",

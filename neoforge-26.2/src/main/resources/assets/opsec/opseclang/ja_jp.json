@@ -102,6 +102,8 @@
   "opsec.alert.portscan.summary.more": " +%d 件以上",
   "opsec.alert.keyresolution": "キー解決の探査を検出しました",
   "opsec.toast.keyresolution": "キー解決の探査を検出",
+  "opsec.alert.aep.ghostSign": "サーバーがゴーストサイン（AntiExploitPreventer）でクライアントを探測しました。プローブを検出しました。Modキーは隠されたままです。",
+  "opsec.toast.aep.probing": "サーバープローブを検出",
   "opsec.hint.alertsCanBeDisabled": "チャットおよびトーストのアラートは OpSec > その他 設定で無効化できます。",
   "opsec.command.help.header": "OpSec コマンド",
   "opsec.command.help.info": "/opsec info [mod]  - 追跡中のMOD一覧、または指定したMODの詳細を表示",

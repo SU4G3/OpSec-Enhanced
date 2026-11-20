@@ -102,6 +102,8 @@
   "opsec.alert.portscan.summary.more": " +%d más",
   "opsec.alert.keyresolution": "Sondeo de resolución de claves detectado",
   "opsec.toast.keyresolution": "Sondeo de resolución de claves detectado",
+  "opsec.alert.aep.ghostSign": "El servidor sondeó tu cliente con un cartel fantasma (AntiExploitPreventer). La sonda fue detectada; las claves de mod siguen ocultas.",
+  "opsec.toast.aep.probing": "Sonda del servidor detectada",
   "opsec.hint.alertsCanBeDisabled": "Las alertas de chat y notificaciones se pueden desactivar en OpSec > Varios.",
   "opsec.command.help.header": "Comandos de OpSec",
   "opsec.command.help.info": "/opsec info [mod]  - Muestra los mods rastreados o los detalles de un mod concreto",

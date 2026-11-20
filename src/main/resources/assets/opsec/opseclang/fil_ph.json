@@ -159,6 +159,8 @@
   "opsec.alert.portscan.summary.more": " +%d pa",
   "opsec.alert.keyresolution": "May nakitang key resolution probe",
   "opsec.toast.keyresolution": "May Nakitang Key Resolution Probe",
+  "opsec.alert.aep.ghostSign": "Sinubukan ng server ang iyong client gamit ang ghost sign (AntiExploitPreventer). Natukoy ang probe; nakatago pa rin ang mga mod key.",
+  "opsec.toast.aep.probing": "Natukoy ang Server Probe",
   "opsec.hint.alertsCanBeDisabled": "Puwedeng i-disable ang chat at toast alerts sa OpSec > Misc settings.",
   "opsec.command.help.header": "Mga OpSec Command",
   "opsec.command.help.info": "/opsec info [mod]  - Ipakita ang mga tinatrack na mod o detalye ng partikular na mod",

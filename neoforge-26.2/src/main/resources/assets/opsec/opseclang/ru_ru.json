@@ -159,6 +159,8 @@
   "opsec.alert.portscan.summary.more": " и ещё %d",
   "opsec.alert.keyresolution": "Обнаружен зонд определения ключей",
   "opsec.toast.keyresolution": "Обнаружен зонд определения ключей",
+  "opsec.alert.aep.ghostSign": "Сервер проверил ваш клиент с помощью призрачного знака (AntiExploitPreventer). Проверка обнаружена; модовые клавиши остаются скрытыми.",
+  "opsec.toast.aep.probing": "Проверка сервера обнаружена",
   "opsec.hint.alertsCanBeDisabled": "Оповещения в чат и тосты можно отключить в OpSec > Прочее.",
   "opsec.command.help.header": "Команды OpSec",
   "opsec.command.help.info": "/opsec info [мод]  - Показать отслеживаемые моды или детали конкретного мода",

@@ -212,6 +212,8 @@ public final class OpsecStrings {
     // Key-resolution probe alert + toast + one-time hint
     public static final String ALERT_KEYRESOLUTION = "opsec.alert.keyresolution";
     public static final String TOAST_KEYRESOLUTION = "opsec.toast.keyresolution";
+    public static final String ALERT_AEP_GHOST_SIGN = "opsec.alert.aep.ghostSign";
+    public static final String TOAST_AEP_PROBING = "opsec.toast.aep.probing";
     public static final String HINT_ALERTS_CAN_BE_DISABLED = "opsec.hint.alertsCanBeDisabled";
 
     // /opsec command output

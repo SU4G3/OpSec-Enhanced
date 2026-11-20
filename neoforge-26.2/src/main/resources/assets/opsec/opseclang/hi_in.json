@@ -102,6 +102,8 @@
   "opsec.alert.portscan.summary.more": " +%d और",
   "opsec.alert.keyresolution": "की रेज़ोल्यूशन प्रोब का पता चला",
   "opsec.toast.keyresolution": "की रेज़ोल्यूशन प्रोब का पता चला",
+  "opsec.alert.aep.ghostSign": "सर्वर ने भूत-साइन (AntiExploitPreventer) का उपयोग करके आपके क्लाइंट की जाँच की। प्रोब का पता चला; मॉड कुंजियाँ छिपी रहती हैं।",
+  "opsec.toast.aep.probing": "सर्वर प्रोब का पता चला",
   "opsec.hint.alertsCanBeDisabled": "चैट और टोस्ट अलर्ट को आप OpSec > अन्य सेटिंग्स में बंद कर सकते हैं।",
   "opsec.command.help.header": "OpSec कमांड्स",
   "opsec.command.help.info": "/opsec info [mod]  - ट्रैक किए गए मॉड्स या किसी विशिष्ट मॉड का विवरण दिखाएं",

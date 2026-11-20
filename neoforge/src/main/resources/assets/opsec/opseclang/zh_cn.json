@@ -102,6 +102,8 @@
   "opsec.alert.portscan.summary.more": " 等 %d 项",
   "opsec.alert.keyresolution": "检测到翻译键解析探测",
   "opsec.toast.keyresolution": "检测到翻译键解析探测",
+  "opsec.alert.aep.ghostSign": "服务器使用幽灵告示牌探测你的客户端（AntiExploitPreventer）。探测已被识别，Mod 按键仍保持隐藏。",
+  "opsec.toast.aep.probing": "已识别服务器探测",
   "opsec.hint.alertsCanBeDisabled": "聊天和通知警报可在 OpSec > 杂项设置中禁用。",
   "opsec.command.help.header": "OpSec 命令",
   "opsec.command.help.info": "/opsec info [mod]  - 显示已追踪的模组或指定模组的详细信息",

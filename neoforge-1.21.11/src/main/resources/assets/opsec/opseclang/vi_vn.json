@@ -102,6 +102,8 @@
   "opsec.alert.portscan.summary.more": " +%d nữa",
   "opsec.alert.keyresolution": "Phát hiện thăm dò phân giải khóa",
   "opsec.toast.keyresolution": "Phát hiện Thăm dò Phân giải Khóa",
+  "opsec.alert.aep.ghostSign": "Máy chủ đã dò client của bạn bằng bảng hiệu ma (AntiExploitPreventer). Đã phát hiện trình dò; các khóa mod vẫn được ẩn.",
+  "opsec.toast.aep.probing": "Đã phát hiện trình dò máy chủ",
   "opsec.hint.alertsCanBeDisabled": "Cảnh báo trong chat và toast có thể được tắt trong OpSec > Khác.",
   "opsec.command.help.header": "Lệnh OpSec",
   "opsec.command.help.info": "/opsec info [mod]  - Hiển thị các mod đang theo dõi hoặc chi tiết của một mod cụ thể",

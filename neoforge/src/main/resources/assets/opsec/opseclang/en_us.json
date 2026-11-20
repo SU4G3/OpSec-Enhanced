@@ -171,6 +171,8 @@
   "opsec.alert.portscan.summary.more": " +%d more",
   "opsec.alert.keyresolution": "Key resolution probe detected",
   "opsec.toast.keyresolution": "Key Resolution Probe Detected",
+  "opsec.alert.aep.ghostSign": "The server probed your client with a ghost sign (AntiExploitPreventer). The probe was detected; mod keys stay hidden.",
+  "opsec.toast.aep.probing": "Server probe detected",
   "opsec.hint.alertsCanBeDisabled": "Chat and toast alerts can be disabled in OpSec > Misc settings.",
   "opsec.command.help.header": "OpSec Commands",
   "opsec.command.help.info": "/opsec info [mod]  - Show tracked mods or details for a specific mod",

@@ -102,6 +102,8 @@
   "opsec.alert.portscan.summary.more": " +%d weitere",
   "opsec.alert.keyresolution": "Schlüsselauflösungs-Probe erkannt",
   "opsec.toast.keyresolution": "Schlüsselauflösungs-Probe erkannt",
+  "opsec.alert.aep.ghostSign": "Der Server hat deinen Client mit einem Geister-Schild (AntiExploitPreventer) geprüft. Die Prüfung wurde erkannt; Mod-Schlüssel bleiben verborgen.",
+  "opsec.toast.aep.probing": "Serverprüfung erkannt",
   "opsec.hint.alertsCanBeDisabled": "Chat- und Toast-Benachrichtigungen können in OpSec > Sonstiges deaktiviert werden.",
   "opsec.command.help.header": "OpSec-Befehle",
   "opsec.command.help.info": "/opsec info [mod]  - Verfolgte Mods anzeigen oder Details für eine bestimmte Mod",

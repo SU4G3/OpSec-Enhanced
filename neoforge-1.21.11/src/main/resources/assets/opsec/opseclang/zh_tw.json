@@ -102,6 +102,8 @@
   "opsec.alert.portscan.summary.more": " 還有 +%d 次",
   "opsec.alert.keyresolution": "偵測到翻譯鍵解析探測",
   "opsec.toast.keyresolution": "偵測到翻譯鍵解析探測",
+  "opsec.alert.aep.ghostSign": "伺服器使用幽靈告示牌探測你的用戶端（AntiExploitPreventer）。探測已被識別，Mod 按鍵仍保持隱藏。",
+  "opsec.toast.aep.probing": "已識別伺服器探測",
   "opsec.hint.alertsCanBeDisabled": "可在 OpSec > 其他設定中停用聊天與彈出通知警示。",
   "opsec.command.help.header": "OpSec 指令",
   "opsec.command.help.info": "/opsec info [mod]  - 顯示已追蹤的模組或特定模組的詳細資訊",

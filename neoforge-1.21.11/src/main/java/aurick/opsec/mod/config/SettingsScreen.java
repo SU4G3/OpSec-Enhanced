@@ -2,9 +2,14 @@ package aurick.opsec.mod.config;
 
 import aurick.opsec.mod.lang.OpsecLang;
 import aurick.opsec.mod.lang.OpsecStrings;
+import aurick.opsec.mod.mixin.client.ScreenAccessor;
+import aurick.opsec.mod.protection.ResourcePackGuard;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
+import me.shedaniel.clothconfig2.gui.ClothConfigScreen;
 import me.shedaniel.clothconfig2.impl.builders.SubCategoryBuilder;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -39,7 +44,8 @@ public final class SettingsScreen {
         ConfigBuilder builder = ConfigBuilder.create()
                 .setParentScreen(parent)
                 .setTitle(OpsecLang.component(OpsecStrings.SCREEN_SETTINGS_TITLE))
-                .setSavingRunnable(config::save);
+                .setSavingRunnable(config::save)
+                .setAfterInitConsumer(screen -> injectGlobalActions(screen));
 
         ConfigCategory category = builder.getOrCreateCategory(
                 OpsecLang.component(OpsecStrings.SCREEN_SETTINGS_TITLE));
@@ -47,9 +53,41 @@ public final class SettingsScreen {
         addStreamerEntries(builder, category, settings);
         addDiagnosticsEntries(builder, category, settings);
 
+        if (config.hasActiveServer()) {
+            category.addEntry(builder.entryBuilder()
+                    .startBooleanToggle(OpsecLang.component(OpsecStrings.OPTION_PACK_CACHE_TRUST),
+                            config.isCurrentServerPackCacheTrusted())
+                    .setTooltip(OpsecLang.component(OpsecStrings.TOOLTIP_PACK_CACHE_TRUST))
+                    .setSaveConsumer(config::setCurrentServerPackCacheTrusted)
+                    .build());
+        }
+
         Screen screen = builder.build();
         OpsecScreens.registerClothConfigScreen(screen);
         return screen;
+    }
+
+
+    private static void injectGlobalActions(Screen screen) {
+        if (!(screen instanceof ClothConfigScreen cc)) {
+            return;
+        }
+        ScreenAccessor accessor = (ScreenAccessor) cc;
+
+        int listLeft = cc.listWidget.left;
+        int listWidth = cc.listWidget.width;
+        int listTop = cc.listWidget.top;
+        int listBottom = cc.listWidget.bottom - 24;
+        int listHeight = cc.listWidget.height - 24;
+        cc.listWidget.updateSize(listWidth, listHeight, listTop, listBottom);
+        cc.listWidget.setLeftPos(listLeft);
+
+        accessor.opsec$addRenderableWidget(Button
+                .builder(OpsecLang.component(OpsecStrings.OPTION_CLEAR_CACHE),
+                        button -> ResourcePackGuard.clearAllCaches())
+                .bounds(cc.width / 2 - 100, cc.listWidget.bottom, 200, 20)
+                .tooltip(Tooltip.create(OpsecLang.component(OpsecStrings.TOOLTIP_CLEAR_CACHE)))
+                .build());
     }
 
 

@@ -1,7 +1,9 @@
 package aurick.opsec.mod.mixin.client;
 
 import aurick.opsec.mod.config.OpsecConfig;
-import aurick.opsec.mod.config.OpsecConfigScreen;
+import aurick.opsec.mod.config.OpsecHubScreen;
+import aurick.opsec.mod.config.ServerRule;
+import aurick.opsec.mod.config.SpoofSettings;
 import aurick.opsec.mod.config.UpdateChecker;
 import aurick.opsec.mod.config.UpdateScreen;
 import aurick.opsec.mod.lang.OpsecLang;
@@ -41,14 +43,19 @@ public abstract class JoinMultiplayerScreenMixin extends Screen {
     
     @Inject(method = "init", at = @At("TAIL"))
     private void opsec$addSettingsButton(CallbackInfo ci) {
+        SpoofSettings global = opsec$globalSettings();
+        if (!global.isShowMultiplayerScreenButton()) {
+            return;
+        }
+
         this.opsec$settingsButton = Button.builder(
-            Component.literal(OpsecConfig.getInstance().getSettings().getEffectiveAccentColor().code() + "OpSec"),
+            Component.literal(global.getEffectiveAccentColor().code() + "OpSec"),
             button -> {
                 if (this.minecraft != null) {
                     //? if >=26.2 {
-                    this.minecraft.setScreenAndShow(new OpsecConfigScreen(this));
+                    this.minecraft.setScreenAndShow(new OpsecHubScreen(this));
                     //?} else {
-                    /*this.minecraft.setScreen(new OpsecConfigScreen(this));*/
+                    /*this.minecraft.setScreen(new OpsecHubScreen(this));*/
                     //?}
                 }
             }
@@ -77,6 +84,20 @@ public abstract class JoinMultiplayerScreenMixin extends Screen {
     }
     *///?}
     
+    /**
+     * The button's visibility and colour are client-local preferences, so they are read
+     * from the ANY rule — the global baseline — rather than from
+     * {@link OpsecConfig#getSettings()}, which is replaced by the matched server rule's
+     * copy while connected. Reading the active settings would make the button change
+     * colour (or vanish) depending on which server the player last joined.
+     */
+    @Unique
+    private static SpoofSettings opsec$globalSettings() {
+        OpsecConfig config = OpsecConfig.getInstance();
+        ServerRule any = config.getAnyRule();
+        return any != null ? any.getSettings() : config.getGlobalSettings();
+    }
+
     @Unique
     private void opsec$updateButtonPosition() {
         if (this.opsec$settingsButton != null) {

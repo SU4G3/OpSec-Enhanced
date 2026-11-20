@@ -159,6 +159,11 @@ public class SpoofSettings {
     private boolean compactLayout = false;
     private boolean showHudIndicator = false;
 
+    // Show the OpSec button on the multiplayer server list. On by default: without
+    // Mod Menu this button is the only way into the settings in-game, so hiding it
+    // is opt-in.
+    private boolean showMultiplayerScreenButton = true;
+
     // Resource pack protection
     private boolean isolatePackCache = true;
     private boolean blockLocalPackUrls = true;
@@ -329,6 +334,9 @@ public class SpoofSettings {
 
     public boolean isShowHudIndicator() { return showHudIndicator; }
     public void setShowHudIndicator(boolean show) { this.showHudIndicator = show; }
+
+    public boolean isShowMultiplayerScreenButton() { return showMultiplayerScreenButton; }
+    public void setShowMultiplayerScreenButton(boolean show) { this.showMultiplayerScreenButton = show; }
 
     public boolean isIsolatePackCache() { return isolatePackCache; }
     public void setIsolatePackCache(boolean isolatePackCache) { this.isolatePackCache = isolatePackCache; }
@@ -547,6 +555,7 @@ public class SpoofSettings {
         json.addProperty("accentColor", accentColor.name());
         json.addProperty("compactLayout", compactLayout);
         json.addProperty("showHudIndicator", showHudIndicator);
+        json.addProperty("showMultiplayerScreenButton", showMultiplayerScreenButton);
         json.addProperty("isolatePackCache", isolatePackCache);
         json.addProperty("blockLocalPackUrls", blockLocalPackUrls);
         json.addProperty("stripModShaders", stripModShaders);
@@ -651,6 +660,7 @@ public class SpoofSettings {
         }
         if (json.has("compactLayout")) s.compactLayout = json.get("compactLayout").getAsBoolean();
         if (json.has("showHudIndicator")) s.showHudIndicator = json.get("showHudIndicator").getAsBoolean();
+        if (json.has("showMultiplayerScreenButton")) s.showMultiplayerScreenButton = json.get("showMultiplayerScreenButton").getAsBoolean();
         if (json.has("isolatePackCache")) s.isolatePackCache = json.get("isolatePackCache").getAsBoolean();
         if (json.has("blockLocalPackUrls")) s.blockLocalPackUrls = json.get("blockLocalPackUrls").getAsBoolean();
         if (json.has("stripModShaders")) s.stripModShaders = json.get("stripModShaders").getAsBoolean();
@@ -795,6 +805,7 @@ public class SpoofSettings {
         this.accentColor = other.accentColor;
         this.compactLayout = other.compactLayout;
         this.showHudIndicator = other.showHudIndicator;
+        this.showMultiplayerScreenButton = other.showMultiplayerScreenButton;
         this.isolatePackCache = other.isolatePackCache;
         this.blockLocalPackUrls = other.blockLocalPackUrls;
         this.stripModShaders = other.stripModShaders;

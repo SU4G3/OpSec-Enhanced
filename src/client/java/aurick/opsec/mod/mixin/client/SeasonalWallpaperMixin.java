@@ -1,7 +1,7 @@
 package aurick.opsec.mod.mixin.client;
 
 import aurick.opsec.mod.config.OpsecConfig;
-import aurick.opsec.mod.config.OpsecConfigScreen;
+import aurick.opsec.mod.config.OpsecScreens;
 import aurick.opsec.mod.util.SeasonalTheme;
 //? if >=26.1 {
 /*import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -56,10 +56,9 @@ public class SeasonalWallpaperMixin {
     //? if >=26.1 {
     /*@Inject(method = "extractRenderState", at = @At("HEAD"))
     private void opsec$drawSeasonalWallpaper(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-        if (!((Object) this instanceof OpsecConfigScreen)) return;
-        SeasonalTheme.Season season = OpsecConfig.getInstance().getSettings().getActiveWallpaperSeason();
-        if (season == SeasonalTheme.Season.NONE) return;
         Screen self = (Screen) (Object) this;
+        if (!OpsecScreens.isOpsecScreen(self)) return;
+        SeasonalTheme.Season season = OpsecConfig.getInstance().getGlobalSettings().getActiveWallpaperSeason();
         int[] gradientColors = opsec$gradientFor(season);
         graphics.fillGradient(0, 0, self.width, self.height, gradientColors[0], gradientColors[1]);
         Identifier icon = season == SeasonalTheme.Season.HALLOWEEN ? PUMPKIN_TEXTURE : TREE_TEXTURE;
@@ -70,10 +69,9 @@ public class SeasonalWallpaperMixin {
     *///?} else {
     @Inject(method = "render", at = @At("HEAD"))
     private void opsec$drawSeasonalWallpaper(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-        if (!((Object) this instanceof OpsecConfigScreen)) return;
-        SeasonalTheme.Season season = OpsecConfig.getInstance().getSettings().getActiveWallpaperSeason();
-        if (season == SeasonalTheme.Season.NONE) return;
         Screen self = (Screen) (Object) this;
+        if (!OpsecScreens.isOpsecScreen(self)) return;
+        SeasonalTheme.Season season = OpsecConfig.getInstance().getGlobalSettings().getActiveWallpaperSeason();
         int[] gradientColors = opsec$gradientFor(season);
         graphics.fillGradient(0, 0, self.width, self.height, gradientColors[0], gradientColors[1]);
         var icon = season == SeasonalTheme.Season.HALLOWEEN ? PUMPKIN_TEXTURE : TREE_TEXTURE;

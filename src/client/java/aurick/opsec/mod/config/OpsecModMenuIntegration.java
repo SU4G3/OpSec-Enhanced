@@ -9,7 +9,7 @@ import net.fabricmc.api.Environment;
 public class OpsecModMenuIntegration implements ModMenuApi {
     @Override
     public ConfigScreenFactory<?> getModConfigScreenFactory() {
-        return OpsecConfigScreen::new;
+        return OpsecHubScreen::new;
     }
 }
 

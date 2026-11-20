@@ -23,13 +23,15 @@ public class LunarVersionSettingsScreen extends Screen {
 
     private final Screen parent;
     private final OpsecConfig config;
+    private final SpoofSettings settings;
     private EditBox suffixInput;
     private StringWidget statusLabel;
 
-    public LunarVersionSettingsScreen(Screen parent, OpsecConfig config) {
+    public LunarVersionSettingsScreen(Screen parent, OpsecConfig config, SpoofSettings settings) {
         super(Component.literal("Lunar Client Version"));
         this.parent = parent;
         this.config = config;
+        this.settings = settings;
     }
 
     @Override
@@ -44,14 +46,14 @@ public class LunarVersionSettingsScreen extends Screen {
                 Component.literal("Version suffix (sent after \"lunarclient:\")"), this.font));
         this.suffixInput = new EditBox(this.font, centerX - 150, centerY - 100, 300, 20, Component.literal("Version suffix"));
         this.suffixInput.setMaxLength(128);
-        this.suffixInput.setValue(config.getSettings().getLunarVersionSuffix());
+        this.suffixInput.setValue(settings.getLunarVersionSuffix());
         this.suffixInput.setHint(Component.literal(OpsecConstants.Brands.LUNAR_CLIENT_DEFAULT_SUFFIX));
         this.addRenderableWidget(this.suffixInput);
 
         this.addRenderableWidget(new StringWidget(centerX - 150, centerY - 72, 300, 10,
                 Component.literal("Known versions — click one, then Save"), this.font));
 
-        List<String> history = config.getSettings().getLunarBrandHistory();
+        List<String> history = settings.getLunarBrandHistory();
         int y = centerY - 58;
         for (int i = 0; i < history.size() && i < 5; i++) {
             String suffix = history.get(i);
@@ -77,13 +79,28 @@ public class LunarVersionSettingsScreen extends Screen {
             statusLabel.setMessage(Component.literal("Version suffix can't contain spaces"));
             return;
         }
-        config.getSettings().setLunarVersionSuffix(suffix);
+        settings.setLunarVersionSuffix(suffix);
         config.save();
         this.onClose();
     }
 
+    //? if <1.21.9 {
+    /*@Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 257) { // GLFW_KEY_ENTER
+            save();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+    *///?}
+
     @Override
     public void onClose() {
+        //? if >=26.2 {
+        /*this.minecraft.setScreenAndShow(parent);*/
+        //?} else {
         this.minecraft.setScreen(parent);
+        //?}
     }
 }

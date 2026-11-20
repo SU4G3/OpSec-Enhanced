@@ -142,7 +142,7 @@ public abstract class TranslatableContentsMixin implements OpsecFromPacketAccess
 
         // VANILLA MODE: Block all mod keys
         if (settings.isVanillaMode()) {
-            String blockedValue = opsec$getBlockedValue(translationKey, defaultValue);
+            String blockedValue = opsec$getBlockedValue(translationKey, defaultValue, settings.isNormalizeClientInfo());
             opsec$logBlocked(translationKey, blockedValue);
             return blockedValue;
         }
@@ -153,7 +153,7 @@ public abstract class TranslatableContentsMixin implements OpsecFromPacketAccess
                 opsec$reportPassthrough(translationKey, defaultValue);
                 return OPSEC_ALLOW_ORIGINAL;
             }
-            String blockedValue = opsec$getBlockedValue(translationKey, defaultValue);
+            String blockedValue = opsec$getBlockedValue(translationKey, defaultValue, settings.isNormalizeClientInfo());
             opsec$logBlocked(translationKey, blockedValue);
             return blockedValue;
         }
@@ -163,7 +163,7 @@ public abstract class TranslatableContentsMixin implements OpsecFromPacketAccess
             opsec$reportPassthrough(translationKey, defaultValue);
             return OPSEC_ALLOW_ORIGINAL;
         }
-        String blockedValue = opsec$getBlockedValue(translationKey, defaultValue);
+        String blockedValue = opsec$getBlockedValue(translationKey, defaultValue, settings.isNormalizeClientInfo());
         opsec$logBlocked(translationKey, blockedValue);
         return blockedValue;
     }
@@ -202,10 +202,20 @@ public abstract class TranslatableContentsMixin implements OpsecFromPacketAccess
         TranslationProtectionHandler.logDetection(InterceptionType.TRANSLATION, translationKey, enUsValue, enUsValue);
     }
 
-    /** Pack-defined value when present (independent of storage merge order), else {@code defaultValue}. */
+    /**
+     * Pack-defined value when present (independent of storage merge order), else {@code defaultValue}.
+     *
+     * <p>With the Client Information Normalizer on, the client claims {@code en_us}, so only
+     * the pack's {@code en_us} value may be shown — a pack value in the player's real locale
+     * contradicts the claimed locale. When the pack defines no {@code en_us} entry for the
+     * key, an en_us client would not resolve the key at all, so {@code defaultValue} (the
+     * raw key) is the faithful answer.</p>
+     */
     @Unique
-    private String opsec$getBlockedValue(String translationKey, String defaultValue) {
-        String packValue = ModRegistry.getServerPackTranslation(translationKey);
+    private String opsec$getBlockedValue(String translationKey, String defaultValue, boolean normalizeClientInfo) {
+        String packValue = normalizeClientInfo
+                ? ModRegistry.getServerPackEnUsTranslation(translationKey)
+                : ModRegistry.getServerPackTranslation(translationKey);
         return packValue != null ? packValue : defaultValue;
     }
 

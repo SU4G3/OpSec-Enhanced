@@ -209,17 +209,14 @@ public class AddCrackedAccountScreen extends Screen {
 
     @Override
     public void onClose() {
-        Screen grandParent = null;
-        if (parent instanceof OpsecConfigScreen configScreen) {
-            grandParent = configScreen.getParent();
-        }
+        Screen target = parent instanceof AccountManagerScreen accountScreen
+                ? accountScreen.getParent()
+                : parent;
         //? if >=26.2 {
-        this.minecraft.setScreenAndShow(new OpsecConfigScreen(grandParent, 3, 0));
-        //?} else if >=1.21.6 {
-        /*this.minecraft.setScreen(new OpsecConfigScreen(grandParent, 3, 0));
-        *///?} else {
-        /*this.minecraft.setScreen(new OpsecConfigScreen(grandParent, 3));*/
-        //?}
+        this.minecraft.setScreenAndShow(new AccountManagerScreen(target));
+        //?} else {
+        /*this.minecraft.setScreen(new AccountManagerScreen(target));
+        *///?}
     }
 
     //? if <1.21.9 {

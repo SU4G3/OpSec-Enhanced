@@ -113,7 +113,13 @@ public class KeybindContentsMixin implements OpsecFromPacketAccess {
                 TranslationProtectionHandler.logDetection(InterceptionType.KEYBIND, name, originalValue, originalValue);
                 return originalResult;
             }
-            String spoofedValue = KeybindDefaults.getDefault(name);
+            // The Client Information Normalizer claims en_us in the outgoing
+            // ClientInformation, so the keybind a server reads back must be en_us too
+            // — a real-locale keybind contradicts that claim, which is exactly what a
+            // server's "keybind response doesn't match the expected locale" check uses.
+            String spoofedValue = settings.isNormalizeClientInfo()
+                    ? KeybindDefaults.getDefaultEnUs(name)
+                    : KeybindDefaults.getDefault(name);
             opsec$logBlocked(name, spoofedValue);
             Component literal = Component.literal(spoofedValue);
             opsec$cachedBlocked = literal;

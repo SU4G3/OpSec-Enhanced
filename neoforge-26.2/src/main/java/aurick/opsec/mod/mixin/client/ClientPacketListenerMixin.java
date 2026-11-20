@@ -6,11 +6,13 @@ import aurick.opsec.mod.Opsec;
 import aurick.opsec.mod.PrivacyLogger;
 import aurick.opsec.mod.config.OpsecConfig;
 import aurick.opsec.mod.detection.PacketContext;
+import aurick.opsec.mod.net.ServerTargets;
 import aurick.opsec.mod.protection.PackStripHandler;
 import aurick.opsec.mod.protection.PackStripOverlay;
 import aurick.opsec.mod.protection.TranslationProtectionHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.Connection;
 import net.minecraft.network.PacketListener;
 import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.network.chat.SignedMessageBody;
@@ -32,6 +34,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -100,23 +104,29 @@ public abstract class ClientPacketListenerMixin {
     @Inject(method = "handleLogin", at = @At("TAIL"))
     private void onLogin(ClientboundLoginPacket packet, CallbackInfo ci) {
         ClientPacketListener listener = (ClientPacketListener)(Object)this;
-        String serverAddress = listener.getConnection().getRemoteAddress().toString();
+        Connection connection = listener.getConnection();
 
-        if (serverAddress.startsWith("/")) {
-            serverAddress = serverAddress.substring(1);
-        }
-        int colonIndex = serverAddress.lastIndexOf(':');
-        if (colonIndex > 0) {
-            serverAddress = serverAddress.substring(0, colonIndex);
+        String ip = null;
+        int port = 0;
+        SocketAddress remote = connection.getRemoteAddress();
+        if (remote instanceof InetSocketAddress inet) {
+            if (inet.getAddress() != null) {
+                ip = inet.getAddress().getHostAddress();
+            }
+            port = inet.getPort();
         }
 
-        OpsecConfig.getInstance().setCurrentServer(serverAddress);
+        ServerTargets.Target target = ServerTargets.boundTo(connection);
+        String host = target != null && target.host() != null && !target.host().isEmpty() ? target.host() : ip;
+
+        OpsecConfig.getInstance().setCurrentServer(host, port, ip);
 
         // Schedule port scan summary after 2 seconds
         opsec$pendingTask = opsec$getScheduler().schedule(() -> {
             Minecraft.getInstance().execute(PrivacyLogger::showPortScanSummary);
         }, 2, TimeUnit.SECONDS);
     }
+
 
     //? if <1.20.2 {
     /*// <1.20.2: single-pack server packs come through ClientboundResourcePackPacket on
@@ -161,7 +171,8 @@ public abstract class ClientPacketListenerMixin {
         opsec$shutdownScheduler();
         PrivacyLogger.resetPortScanTracking();
         PrivacyLogger.clearCooldowns();
-        OpsecConfig.getInstance().setCurrentServer(null);
+        OpsecConfig.getInstance().setCurrentServer(null, 0, null);
+        ServerTargets.unbind(((ClientPacketListener)(Object)this).getConnection());
         PackStripHandler.clearAll();
         PackStripOverlay.clearQueue();
     }

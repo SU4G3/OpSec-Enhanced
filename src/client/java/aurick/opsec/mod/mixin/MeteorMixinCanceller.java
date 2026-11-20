@@ -27,7 +27,7 @@ import java.util.List;
  *
  * On Minecraft 26.1+ this canceller is a no-op: Meteor Client 26.1.2 removed the targeted
  * AbstractSignEditScreenMixin upstream, so there is nothing to cancel. The UI toggle is
- * also hidden on 26.1+ (see OpsecConfigScreen).
+ * also hidden on 26.1+ (see RuleSettingsScreen).
  */
 public class MeteorMixinCanceller implements MixinCanceller {
     

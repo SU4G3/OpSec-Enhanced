@@ -16,23 +16,24 @@ public class GameProxySettingsScreen extends Screen {
 
     private final Screen parent;
     private final OpsecConfig config;
+    private final SpoofSettings settings;
     private EditBox hostInput;
     private EditBox portInput;
     private EditBox usernameInput;
     private EditBox passwordInput;
     private StringWidget statusLabel;
 
-    public GameProxySettingsScreen(Screen parent, OpsecConfig config) {
+    public GameProxySettingsScreen(Screen parent, OpsecConfig config, SpoofSettings settings) {
         super(Component.literal("Game Connection Proxy"));
         this.parent = parent;
         this.config = config;
+        this.settings = settings;
     }
 
     @Override
     protected void init() {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
-        SpoofSettings settings = config.getSettings();
 
         int titleWidth = this.font.width(this.title);
         this.addRenderableWidget(new StringWidget(centerX - titleWidth / 2, centerY - 85, titleWidth, 20, this.title, this.font));
@@ -83,7 +84,6 @@ public class GameProxySettingsScreen extends Screen {
             return;
         }
 
-        SpoofSettings settings = config.getSettings();
         settings.setGameProxyHost(hostInput.getValue());
         settings.setGameProxyPort(port);
         settings.setGameProxyUsername(usernameInput.getValue());
@@ -92,8 +92,23 @@ public class GameProxySettingsScreen extends Screen {
         this.onClose();
     }
 
+    //? if <1.21.9 {
+    /*@Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 257) { // GLFW_KEY_ENTER
+            save();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+    *///?}
+
     @Override
     public void onClose() {
+        //? if >=26.2 {
+        /*this.minecraft.setScreenAndShow(parent);*/
+        //?} else {
         this.minecraft.setScreen(parent);
+        //?}
     }
 }

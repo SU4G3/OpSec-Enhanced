@@ -235,18 +235,13 @@ public class AddAccountScreen extends Screen {
     
     @Override
     public void onClose() {
-        // Get the parent's parent (the screen before OpsecConfigScreen)
-        Screen grandParent = null;
-        if (parent instanceof OpsecConfigScreen configScreen) {
-            grandParent = configScreen.getParent();
-        }
-        // Create a fresh config screen with the Accounts tab selected (index 3)
+        Screen target = parent instanceof AccountManagerScreen accountScreen
+                ? accountScreen.getParent()
+                : parent;
         //? if >=26.2 {
-        /*this.minecraft.setScreenAndShow(new OpsecConfigScreen(grandParent, 3, 0));*/
-        //?} else if >=1.21.6 {
-        this.minecraft.setScreen(new OpsecConfigScreen(grandParent, 3, 0));
+        /*this.minecraft.setScreenAndShow(new AccountManagerScreen(target));*/
         //?} else {
-        /*this.minecraft.setScreen(new OpsecConfigScreen(grandParent, 3));*/
+        this.minecraft.setScreen(new AccountManagerScreen(target));
         //?}
     }
     

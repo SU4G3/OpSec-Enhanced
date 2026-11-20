@@ -55,3 +55,6 @@ __pycache__/
 CLAUDE.md
 .planning/
 AGENTS.md
+
+# Agent tooling
+.omo/

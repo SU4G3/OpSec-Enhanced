@@ -54,16 +54,6 @@ public final class OpsecStrings {
 
     public static final String SECTION_APPEARANCE = "opsec.section.appearance";
     public static final String OPTION_ACCENT_COLOR = "opsec.option.accentColor";
-    public static final String OPTION_HALLOWEEN_THEME = "opsec.option.halloweenTheme";
-    public static final String TOOLTIP_HALLOWEEN_THEME = "opsec.option.halloweenTheme.tooltip";
-    public static final String OPTION_CHRISTMAS_THEME = "opsec.option.christmasTheme";
-    public static final String TOOLTIP_CHRISTMAS_THEME = "opsec.option.christmasTheme.tooltip";
-    public static final String OPTION_WALLPAPER_MODE = "opsec.option.wallpaperMode";
-    public static final String TOOLTIP_WALLPAPER_MODE = "opsec.option.wallpaperMode.tooltip";
-    public static final String WALLPAPER_MODE_OFF = "opsec.option.wallpaperMode.off";
-    public static final String WALLPAPER_MODE_AUTO = "opsec.option.wallpaperMode.auto";
-    public static final String WALLPAPER_MODE_HALLOWEEN = "opsec.option.wallpaperMode.halloween";
-    public static final String WALLPAPER_MODE_CHRISTMAS = "opsec.option.wallpaperMode.christmas";
     public static final String OPTION_COMPACT_LAYOUT = "opsec.option.compactLayout";
     public static final String TOOLTIP_COMPACT_LAYOUT = "opsec.option.compactLayout.tooltip";
     public static final String OPTION_SHOW_HUD = "opsec.option.showHud";

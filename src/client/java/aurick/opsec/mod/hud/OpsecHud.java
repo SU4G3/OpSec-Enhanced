@@ -73,7 +73,7 @@ public final class OpsecHud {
 
     public static Component hudComponent() {
         SpoofSettings settings = OpsecConfig.getInstance().getSettings();
-        SpoofSettings.AccentColor accent = settings.getEffectiveAccentColor();
+        SpoofSettings.AccentColor accent = settings.getAccentColor();
         String brand = settings.getEffectiveBrand();
 
         Component cached = cachedComponent;

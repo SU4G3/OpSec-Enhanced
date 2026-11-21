@@ -49,7 +49,7 @@ public abstract class JoinMultiplayerScreenMixin extends Screen {
         }
 
         this.opsec$settingsButton = Button.builder(
-            Component.literal(global.getEffectiveAccentColor().code() + "OpSec"),
+            Component.literal(global.getAccentColor().code() + "OpSec"),
             button -> {
                 if (this.minecraft != null) {
                     //? if >=26.2 {

@@ -163,9 +163,6 @@ These options are **client-wide** — they apply everywhere and are not tied to 
 | Setting | Description |
 |---------|-------------|
 | **Accent Color** | Cosmetic accent used for the HUD indicator and the multiplayer-screen "OpSec" button |
-| **Halloween Theme** | Enable the Halloween wallpaper variant |
-| **Christmas Theme** | Enable the Christmas wallpaper variant |
-| **Wallpaper Mode** | Which seasonal wallpaper to draw behind OpSec screens (Off / Auto / Halloween / Christmas) |
 | **Compact Layout** | Tighter row spacing in this settings menu |
 | **Show HUD Indicator** | Small on-screen label showing your current spoof brand. Rendered via a direct Mixin on 1.20.1-1.21.11 (reliable). On 26.1+, uses Fabric API's newer HUD pipeline instead since vanilla's own rendering internals there change shape between patches — **experimental, less tested; report back if it doesn't show up** |
 | **Show button on multiplayer screen** | Show the `OpSec` button on the multiplayer server list. On by default — without Mod Menu this button is the only way into the settings in-game |

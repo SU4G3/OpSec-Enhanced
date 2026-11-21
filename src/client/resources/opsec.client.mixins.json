@@ -19,7 +19,6 @@
 		"PackSelectionModelMixin",
 		"PackSelectionModelEntryBaseMixin",
 		"ChannelRegistrationMixin",
-		"SeasonalWallpaperMixin",
 		"JoinMultiplayerScreenMixin",
 		"ScreenAccessor",
 		"MinecraftAccessor",

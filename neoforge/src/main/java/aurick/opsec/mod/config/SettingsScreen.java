@@ -104,26 +104,6 @@ public final class SettingsScreen {
                 .build());
 
         group.add(builder.entryBuilder()
-                .startBooleanToggle(OpsecLang.component(OpsecStrings.OPTION_HALLOWEEN_THEME), settings.isHalloweenThemeEnabled())
-                .setTooltip(OpsecLang.component(OpsecStrings.TOOLTIP_HALLOWEEN_THEME))
-                .setSaveConsumer(settings::setHalloweenThemeEnabled)
-                .build());
-
-        group.add(builder.entryBuilder()
-                .startBooleanToggle(OpsecLang.component(OpsecStrings.OPTION_CHRISTMAS_THEME), settings.isChristmasThemeEnabled())
-                .setTooltip(OpsecLang.component(OpsecStrings.TOOLTIP_CHRISTMAS_THEME))
-                .setSaveConsumer(settings::setChristmasThemeEnabled)
-                .build());
-
-        group.add(builder.entryBuilder()
-                .startSelector(OpsecLang.component(OpsecStrings.OPTION_WALLPAPER_MODE),
-                        SpoofSettings.WallpaperMode.values(), settings.getWallpaperMode())
-                .setNameProvider(SettingsScreen::wallpaperName)
-                .setTooltip(OpsecLang.component(OpsecStrings.TOOLTIP_WALLPAPER_MODE))
-                .setSaveConsumer(settings::setWallpaperMode)
-                .build());
-
-        group.add(builder.entryBuilder()
                 .startBooleanToggle(OpsecLang.component(OpsecStrings.OPTION_COMPACT_LAYOUT), settings.isCompactLayout())
                 .setTooltip(OpsecLang.component(OpsecStrings.TOOLTIP_COMPACT_LAYOUT))
                 .setSaveConsumer(settings::setCompactLayout)
@@ -236,15 +216,6 @@ public final class SettingsScreen {
 
     private static Component accentName(SpoofSettings.AccentColor color) {
         return Component.literal(color.code() + color.name());
-    }
-
-    private static Component wallpaperName(SpoofSettings.WallpaperMode mode) {
-        return switch (mode) {
-            case OFF -> OpsecLang.component(OpsecStrings.WALLPAPER_MODE_OFF);
-            case AUTO -> OpsecLang.component(OpsecStrings.WALLPAPER_MODE_AUTO);
-            case HALLOWEEN -> OpsecLang.component(OpsecStrings.WALLPAPER_MODE_HALLOWEEN);
-            case CHRISTMAS -> OpsecLang.component(OpsecStrings.WALLPAPER_MODE_CHRISTMAS);
-        };
     }
 
     private static Component nameMaskName(SpoofSettings.NameMaskStyle style) {

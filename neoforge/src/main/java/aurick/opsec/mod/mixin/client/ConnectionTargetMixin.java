@@ -35,6 +35,6 @@ public class ConnectionTargetMixin {
             return;
         }
         String ip = address.getAddress() != null ? address.getAddress().getHostAddress() : null;
-        ServerTargets.bind(connection, ip);
+        ServerTargets.bind(connection, ip, address.getPort());
     }
 }

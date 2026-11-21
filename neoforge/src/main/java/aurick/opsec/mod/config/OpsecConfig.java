@@ -460,6 +460,37 @@ public class OpsecConfig {
         return any.getSettings();
     }
 
+    /**
+     * The settings that apply to one address, without touching the active settings.
+     *
+     * <p>Used by the consumers that run while a connection is being set up: they must see
+     * the rule of the server that is being opened, not the rule of the server that was
+     * connected before. The ANY rule is the fallback when the address matches nothing.</p>
+     */
+    public SpoofSettings settingsForTarget(String host, int port, String ip) {
+        ServerRule matched = findMatchingRule(host, port, ip);
+        return matched != null ? matched.getSettings() : getGlobalSettings();
+    }
+
+    /**
+     * Selects the rule that matches an address the player is about to connect to.
+     *
+     * <p>The rule has to be picked before the connection is opened: the game proxy and the
+     * client-information normalizer both run while the connection is still being set up,
+     * and they would otherwise read the global baseline instead of the server's own rule.
+     * Unlike {@link #setCurrentServer(String, int, String)} this does not record the
+     * server as connected -- that only happens once the login succeeds.</p>
+     */
+    public void selectRuleFor(String host, int port, String ip) {
+        ServerRule matched = findMatchingRule(host, port, ip);
+        if (matched == null) {
+            return;
+        }
+        this.activeRule = matched;
+        this.settings = matched.getSettings();
+        Opsec.LOGGER.info("[OpSec] Server rule selected: {} {}", matched.getMatchType(), matched.getPattern());
+    }
+
     /** The rules the user can edit — every rule except the mandatory ANY fallback. */
     public List<ServerRule> getEditableRules() {
         List<ServerRule> editable = new ArrayList<>();

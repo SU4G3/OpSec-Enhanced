@@ -3,6 +3,7 @@ package aurick.opsec.mod.mixin.client;
 import aurick.opsec.mod.Opsec;
 import aurick.opsec.mod.config.OpsecConfig;
 import aurick.opsec.mod.config.SpoofSettings;
+import aurick.opsec.mod.net.ServerTargets;
 import aurick.opsec.mod.proxy.HttpConnectProxyHandler;
 import aurick.opsec.mod.proxy.PendingProxyTargets;
 import aurick.opsec.mod.proxy.Socks5ConnectHandler;
@@ -15,6 +16,7 @@ import net.minecraft.server.network.EventLoopGroupHolder;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -45,17 +47,34 @@ public class GameConnectionProxyMixin {
     @Inject(method = "connect(Ljava/net/InetSocketAddress;Lnet/minecraft/server/network/EventLoopGroupHolder;Lnet/minecraft/network/Connection;)Lio/netty/channel/ChannelFuture;",
         at = @At("HEAD"))
     private static void opsec$captureTarget(InetSocketAddress address, EventLoopGroupHolder group, Connection connection, CallbackInfoReturnable<ChannelFuture> cir) {
-        SpoofSettings settings = OpsecConfig.getInstance().getSettings();
+        SpoofSettings settings = opsec$settingsFor(address, connection);
         if (settings.getGameProxyType() == SpoofSettings.GameProxyType.NONE) return;
         if (settings.getGameProxyHost().isEmpty()) return;
         PendingProxyTargets.put(connection, address);
+    }
+
+    /**
+     * The settings that apply to the connection that is being opened: the rule that
+     * matches the address the player typed, not the rule of the server that was connected
+     * before. The target is bound to the connection here, so the same answer comes back no
+     * matter which of the two connection hooks runs first.
+     */
+    @Unique
+    private static SpoofSettings opsec$settingsFor(InetSocketAddress address, Connection connection) {
+        String ip = address != null && address.getAddress() != null ? address.getAddress().getHostAddress() : null;
+        int port = address != null ? address.getPort() : 0;
+        ServerTargets.Target target = ServerTargets.bind(connection, ip, port);
+        if (target == null) {
+            return OpsecConfig.getInstance().getGlobalSettings();
+        }
+        return OpsecConfig.getInstance().settingsForTarget(target.host(), target.port(), target.ip());
     }
 
     @Redirect(method = "connect(Ljava/net/InetSocketAddress;Lnet/minecraft/server/network/EventLoopGroupHolder;Lnet/minecraft/network/Connection;)Lio/netty/channel/ChannelFuture;",
         at = @At(value = "INVOKE", target = "Lio/netty/bootstrap/Bootstrap;connect(Ljava/net/InetAddress;I)Lio/netty/channel/ChannelFuture;"))
     private static ChannelFuture opsec$dialProxyInstead(Bootstrap bootstrap, InetAddress address, int port,
             InetSocketAddress origAddress, EventLoopGroupHolder group, Connection connection) {
-        SpoofSettings settings = OpsecConfig.getInstance().getSettings();
+        SpoofSettings settings = opsec$settingsFor(origAddress, connection);
         SpoofSettings.GameProxyType type = settings.getGameProxyType();
         String host = settings.getGameProxyHost();
         if (type == SpoofSettings.GameProxyType.NONE || host.isEmpty()) {
@@ -95,7 +114,10 @@ class GameConnectionProxyPipelineMixin {
         InetSocketAddress real = PendingProxyTargets.take(val$connection);
         if (real == null) return;
 
-        SpoofSettings settings = OpsecConfig.getInstance().getSettings();
+        ServerTargets.Target target = ServerTargets.boundTo(val$connection);
+        SpoofSettings settings = target != null
+                ? OpsecConfig.getInstance().settingsForTarget(target.host(), target.port(), target.ip())
+                : OpsecConfig.getInstance().getGlobalSettings();
         String username = settings.getGameProxyUsername();
         String password = settings.getGameProxyPassword();
         ChannelHandler handshake = settings.getGameProxyType() == SpoofSettings.GameProxyType.HTTP

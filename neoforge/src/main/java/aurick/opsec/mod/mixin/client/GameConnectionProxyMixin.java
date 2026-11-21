@@ -3,6 +3,7 @@ package aurick.opsec.mod.mixin.client;
 import aurick.opsec.mod.Opsec;
 import aurick.opsec.mod.config.OpsecConfig;
 import aurick.opsec.mod.config.SpoofSettings;
+import aurick.opsec.mod.net.ServerTargets;
 import aurick.opsec.mod.proxy.HttpConnectProxyHandler;
 import aurick.opsec.mod.proxy.PendingProxyTargets;
 import aurick.opsec.mod.proxy.Socks5ConnectHandler;
@@ -14,6 +15,7 @@ import net.minecraft.network.Connection;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -30,8 +32,8 @@ import java.net.InetSocketAddress;
  * {@code java.net}'s proxy selector entirely.
  *
  * <p>Vanilla's own pipeline construction, compression/serialization setup and worker-group
- * selection are left completely untouched -- only the actual TCP dial target is swapped to
- * the proxy's address (via {@link Redirect} on the single Netty
+ * selection are left completely untouched for every targeted version -- only the actual TCP
+ * dial target is swapped to the proxy's address (via {@link Redirect} on the single Netty
  * {@code Bootstrap.connect(InetAddress, int)} call), with a from-scratch SOCKS5/HTTP CONNECT
  * handshake handler ({@link Socks5ConnectHandler}/{@link HttpConnectProxyHandler}) prepended
  * to the pipeline (via the companion mixin below, on {@code Connection$1}) to tunnel to the
@@ -44,17 +46,45 @@ public class GameConnectionProxyMixin {
     @Inject(method = "connect(Ljava/net/InetSocketAddress;ZLnet/minecraft/network/Connection;)Lio/netty/channel/ChannelFuture;",
         at = @At("HEAD"))
     private static void opsec$captureTarget(InetSocketAddress address, boolean useEpoll, Connection connection, CallbackInfoReturnable<ChannelFuture> cir) {
-        SpoofSettings settings = OpsecConfig.getInstance().getSettings();
+        opsec$capture(address, connection);
+    }
+
+    @Unique
+    private static void opsec$capture(InetSocketAddress address, Connection connection) {
+        SpoofSettings settings = opsec$settingsFor(address, connection);
         if (settings.getGameProxyType() == SpoofSettings.GameProxyType.NONE) return;
         if (settings.getGameProxyHost().isEmpty()) return;
         PendingProxyTargets.put(connection, address);
+    }
+
+    /**
+     * The settings that apply to the connection that is being opened: the rule that
+     * matches the address the player typed, not the rule of the server that was connected
+     * before. The target is bound to the connection here, so the same answer comes back no
+     * matter which of the two connection hooks runs first.
+     */
+    @Unique
+    private static SpoofSettings opsec$settingsFor(InetSocketAddress address, Connection connection) {
+        String ip = address != null && address.getAddress() != null ? address.getAddress().getHostAddress() : null;
+        int port = address != null ? address.getPort() : 0;
+        ServerTargets.Target target = ServerTargets.bind(connection, ip, port);
+        if (target == null) {
+            return OpsecConfig.getInstance().getGlobalSettings();
+        }
+        return OpsecConfig.getInstance().settingsForTarget(target.host(), target.port(), target.ip());
     }
 
     @Redirect(method = "connect(Ljava/net/InetSocketAddress;ZLnet/minecraft/network/Connection;)Lio/netty/channel/ChannelFuture;",
         at = @At(value = "INVOKE", target = "Lio/netty/bootstrap/Bootstrap;connect(Ljava/net/InetAddress;I)Lio/netty/channel/ChannelFuture;"))
     private static ChannelFuture opsec$dialProxyInstead(Bootstrap bootstrap, InetAddress address, int port,
             InetSocketAddress origAddress, boolean useEpoll, Connection connection) {
-        SpoofSettings settings = OpsecConfig.getInstance().getSettings();
+        return opsec$dialProxy(bootstrap, address, port, origAddress, connection);
+    }
+
+    @Unique
+    private static ChannelFuture opsec$dialProxy(Bootstrap bootstrap, InetAddress address, int port,
+            InetSocketAddress origAddress, Connection connection) {
+        SpoofSettings settings = opsec$settingsFor(origAddress, connection);
         SpoofSettings.GameProxyType type = settings.getGameProxyType();
         String host = settings.getGameProxyHost();
         if (type == SpoofSettings.GameProxyType.NONE || host.isEmpty()) {
@@ -65,7 +95,7 @@ public class GameConnectionProxyMixin {
             Opsec.LOGGER.info("[OpSec] Routing game connection via {} proxy {}:{}", type, host, settings.getGameProxyPort());
             return bootstrap.connect(proxyAddress);
         } catch (Exception e) {
-            // Clear the pending-proxy record opsec$captureTarget wrote above -- otherwise the
+            // Clear the pending-proxy record opsec$capture wrote above -- otherwise the
             // Connection$1 pipeline injection still prepends a SOCKS5/HTTP CONNECT handshake
             // handler onto what is now a direct connection to the real server, which doesn't
             // speak that handshake and would hang/break the join instead of degrading cleanly.
@@ -94,7 +124,10 @@ class GameConnectionProxyPipelineMixin {
         InetSocketAddress real = PendingProxyTargets.take(val$connection);
         if (real == null) return;
 
-        SpoofSettings settings = OpsecConfig.getInstance().getSettings();
+        ServerTargets.Target target = ServerTargets.boundTo(val$connection);
+        SpoofSettings settings = target != null
+                ? OpsecConfig.getInstance().settingsForTarget(target.host(), target.port(), target.ip())
+                : OpsecConfig.getInstance().getGlobalSettings();
         String username = settings.getGameProxyUsername();
         String password = settings.getGameProxyPassword();
         ChannelHandler handshake = settings.getGameProxyType() == SpoofSettings.GameProxyType.HTTP

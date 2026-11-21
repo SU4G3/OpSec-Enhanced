@@ -110,18 +110,26 @@ public abstract class ClientPacketListenerMixin {
         ClientPacketListener listener = (ClientPacketListener)(Object)this;
         Connection connection = listener.getConnection();
 
-        String ip = null;
-        int port = 0;
-        SocketAddress remote = connection.getRemoteAddress();
-        if (remote instanceof InetSocketAddress inet) {
-            if (inet.getAddress() != null) {
-                ip = inet.getAddress().getHostAddress();
-            }
-            port = inet.getPort();
-        }
-
+        // The bound target is the address the player typed plus the address it resolved
+        // to. The connection's own remote address is the proxy's address when the game
+        // proxy is in use, so it can only serve as the fallback.
         ServerTargets.Target target = ServerTargets.boundTo(connection);
-        String host = target != null && target.host() != null && !target.host().isEmpty() ? target.host() : ip;
+        String host = target != null ? target.host() : null;
+        String ip = target != null ? target.ip() : null;
+        int port = target != null ? target.port() : 0;
+
+        if (ip == null) {
+            SocketAddress remote = connection.getRemoteAddress();
+            if (remote instanceof InetSocketAddress inet) {
+                if (inet.getAddress() != null) {
+                    ip = inet.getAddress().getHostAddress();
+                }
+                port = inet.getPort();
+            }
+        }
+        if (host == null || host.isEmpty()) {
+            host = ip;
+        }
 
         OpsecConfig.getInstance().setCurrentServer(host, port, ip);
 

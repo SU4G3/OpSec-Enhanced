@@ -41,6 +41,8 @@
 - **Encrypted Account Storage** - Saved session/refresh tokens are AES-256-GCM encrypted at rest instead of stored as plaintext, with an owner-only-permissioned key file
 - **Skin/Cape Correlation Alerts** - Warns when two saved accounts share the same active skin or cape texture, since that's a real way to link a "main" and an "alt" together
 - **Chat Link/Command Guard** - Requires confirmation before a clicked chat/sign/book message copies to your clipboard or runs a command (vanilla does both instantly, unlike `OPEN_URL`), plus an extra heads-up before opening links shaped like phishing/IP-grabber patterns (raw IP, punycode, look-alike characters)
+- **Per-Server Rules** - Every option can be set per server instead of globally, so a server you trust doesn't need the same protection as one you don't. Rules match by exact address, regex, or resolved IP, and a mandatory "Default (all servers)" rule holds the client-wide baseline
+- **AntiExploitPreventer Ghost-Sign Detection** - Detects AEP's ghost-sign probe (a server plants a sign on the block you stand on and reads the text your client sends back) and alerts you instead of letting it pass unnoticed
 - **Per-Server Pack Cache Isolation** - Extends Isolate Pack Cache to also bucket by server address, closing a side-channel where two colluding servers could share a resource-pack push ID to detect a returning player across servers even without sharing an account
 - **Sensitive Log Redaction** - Strips token-shaped strings from logged authentication error responses before they hit the log file
 - **[Spoof As Options](#spoof-as-options)** - While spoofing as vanilla, optionally advertise as Lunar Client or Badlion Client instead
@@ -64,24 +66,28 @@
 **Fabric** (all features, 1.20 – 26.3):
 - **Fabric Loader** 0.16.0+ (0.18.5+ for MC 26.1.x)
 - **Fabric API** (matching your Minecraft version)
+- **Cloth Config** (matching your Minecraft version) — required by the settings UI
 
 **NeoForge** (1.21.1, 1.21.11, 26.2 — see [Known Issues](#known-issues) for the feature gaps):
-- **NeoForge** matching your Minecraft version — no other dependency needed
+- **NeoForge** matching your Minecraft version
+- **Cloth Config** (matching your Minecraft version) — required by the settings UI
 
 ### Installation
 
 **Fabric:**
 1. Install [Fabric Loader](https://fabricmc.net/use/) for your Minecraft version
 2. Download the latest [Fabric API](https://modrinth.com/mod/fabric-api) for your Minecraft version
-3. Download the latest `opsec-[minecraft_version]+[version].jar` from [Modrinth](https://modrinth.com/mod/opsec-enhanced) or the [Releases](https://github.com/SU4G3/OpSec-Enhanced/releases/) page
-4. Place both mods in your `.minecraft/mods` folder
-5. Launch Minecraft
+3. Download the latest [Cloth Config](https://modrinth.com/mod/cloth-config) for your Minecraft version
+4. Download the latest `opsec-[minecraft_version]+[version].jar` from [Modrinth](https://modrinth.com/mod/opsec-enhanced) or the [Releases](https://github.com/SU4G3/OpSec-Enhanced/releases/) page
+5. Place all three mods in your `.minecraft/mods` folder
+6. Launch Minecraft
 
 **NeoForge:**
 1. Install [NeoForge](https://neoforged.net/) for your Minecraft version (1.21.1, 1.21.11, or 26.2)
-2. Download the latest `opsec-neoforge-[minecraft_version]+[version].jar` from [CurseForge](https://www.curseforge.com/minecraft/mc-mods/opsec-enhanced) or the [Releases](https://github.com/SU4G3/OpSec-Enhanced/releases/) page
-3. Place it in your `.minecraft/mods` folder
-4. Launch Minecraft
+2. Download the latest [Cloth Config](https://modrinth.com/mod/cloth-config) for your Minecraft version
+3. Download the latest `opsec-neoforge-[minecraft_version]+[version].jar` from [CurseForge](https://www.curseforge.com/minecraft/mc-mods/opsec-enhanced) or the [Releases](https://github.com/SU4G3/OpSec-Enhanced/releases/) page
+4. Place both mods in your `.minecraft/mods` folder
+5. Launch Minecraft
 
 ## Configurations
 
@@ -92,7 +98,31 @@ The settings menu is accessible via the `OpSec` button in the multiplayer server
 
 If settings are changed while connected to a server it is recommended to reconnect to the server to ensure changes are applied.
 
-#### Protection Tab
+### Settings Layout
+
+The settings open on a hub screen with three cards:
+
+| Card | Contents |
+|------|----------|
+| **Server Rules** | The per-server rule list, and the options each rule applies |
+| **Account Manager** | Saved accounts, adding accounts, skin/cape randomization |
+| **Settings** | Client-wide preferences: appearance, streamer mode, diagnostics |
+
+Rules are matched in order and the first rule that matches the server you connect to wins. A mandatory **Default (all servers)** rule always exists as the fallback — it holds the client-wide baseline and is evaluated last, so it can never be deleted or reordered.
+
+Each rule matches a server address in one of three ways:
+
+| Match Type | Matches when |
+|------------|--------------|
+| **EXACT** | The address you typed equals the pattern (optionally with `:port`) |
+| **REGEX** | The pattern is a Java regular expression that fully matches the address |
+| **IP** | The pattern is an IP literal equal to the address the hostname resolved to |
+
+A rule's **Applies To** field takes a comma-separated list of addresses; in REGEX mode each entry is matched separately. A literal comma inside a regex is written `\x2c`.
+
+#### Server Rules → Protection
+
+These options are **per server** — every rule carries its own copy, so one rule's settings never leak into another.
 
 | Setting | Description |
 |---------|-------------|
@@ -103,48 +133,64 @@ If settings are changed while connected to a server it is recommended to reconne
 | **Block Local Pack URLs** | Enable/disable [local URL blocking](#block-local-urls) |
 | **Bypass Server Pack Requirement** | Configure [server pack bypass](#bypass-server-pack-requirement) behavior:<br/>• **MANUAL** (default): Default vanilla behavior on push. You can still toggle any server pack.<br/>• **ASK**: Server resource pack not applied but with consent screen to ask if the pack(s) should be applied<br/>• **ALWAYS ON**: Server resource pack not applied by default. You can still toggle any server pack |
 | **Strip Mod Shader Overrides** | Enable/disable [shader override stripping](#strip-mod-shader-overrides) |
-| **Clear Cache** | Delete all cached server resource packs |
 | **Key Resolution Spoofing** | Enable/disable [key resolution protection](#key-resolution-protection) |
 | **Fake Default Keybinds** | Return default vanilla keybind values instead of actual bindings |
 | **Meteor Fix** | Disable Meteor Client's broken key resolution protection (only shown when Meteor is installed) |
 | **Signing Mode** | Configure [chat signing](#chat-signing-control) behavior:<br/>• **OFF**: Strip signatures (maximum privacy)<br/>• **ON**: Default Minecraft behavior<br/>• **AUTO**: Only sign when required (recommended) |
 | **Disable Telemetry** | Enable/disable [telemetry blocking](#telemetry-blocking) |
+| **Guard Chat Links** | Require confirmation before a clicked chat/link copies to your clipboard, runs a command, or opens a URL |
 | **Command History Guard** | Enable/disable [command history redaction](#command-history-guard) (default: on) |
 | **Block Cookies** | Enable/disable [cookie blocking](#block-cookies) (MC 1.20.5+, default: on) |
+| **Confirm Transfer** | Require confirmation before following a server's `Transfer` request (MC 1.20.5+) |
 | **Client Information Normalizer** | Enable/disable [reporting a fixed common client info combo](#client-information-normalizer) (default: on) |
 | **Scrub Pack Download Headers** | Enable/disable [neutralizing per-player pack-download headers](#scrub-pack-download-headers) (MC 1.20.3+, default: on) |
 | **Auto-Purge Pack Cache On Exit** | Enable/disable [wiping the pack cache on game close](#auto-purge-pack-cache-on-exit) (default: off) |
-| **Trust This Server (Skip Auto-Purge)** | Per-server (Server Profile section): [exempt this server's pack-cache bucket](#auto-purge-pack-cache-on-exit) from Auto-Purge (default: off) |
 | **Lazy Server List Ping** | Enable/disable [skipping the automatic multiplayer-list ping](#lazy-server-list-ping) (default: off) |
 | **Cloudflare Ping Relay** | Only shown while Lazy Server List Ping is on. Backs saved-server pings with a self-hosted [Cloudflare Worker relay](#cloudflare-ping-relay) instead of just skipping them (default: off) |
 | **Game Connection Proxy** | Route the actual multiplayer connection through **SOCKS5**, **HTTP**, or **Off** (default). See [Game Connection Proxy](#game-connection-proxy) |
 
-#### Whitelist Tab
+#### Server Rules → Mod Whitelist
 
 | Setting | Description |
 |---------|-------------|
 | **Whitelist Mode** | Select whitelist behavior:<br/>• **BLOCK ALL**: All mod content blocked<br/>• **AUTO**: Mods with network channels are automatically whitelisted (default)<br/>• **CUSTOM**: Manually select which mods to whitelist |
 | **Installed Mods** | Toggle individual mods ON/OFF to exempt them from protection (CUSTOM mode only) |
 
-#### Miscellaneous Tab
+#### Settings Screen (Appearance)
+
+These options are **client-wide** — they apply everywhere and are not tied to a server.
 
 | Setting | Description |
 |---------|-------------|
 | **Accent Color** | Cosmetic accent used for the HUD indicator and the multiplayer-screen "OpSec" button |
 | **Compact Layout** | Tighter row spacing in this settings menu |
 | **Show HUD Indicator** | Small on-screen label showing your current spoof brand. Rendered via a direct Mixin on 1.20.1-1.21.11 (reliable). On 26.1+, uses Fabric API's newer HUD pipeline instead since vanilla's own rendering internals there change shape between patches — **experimental, less tested; report back if it doesn't show up** |
-| **Custom Profile For This Server** | Save/clear a settings snapshot tied to the currently-connected server address. Only shown when the config screen is opened with an active connection |
-| **Show Alerts** | Display chat messages when tracking is detected |
-| **Show Toasts** | Display popup notifications for important events |
-| **Log Detections** | Log all detection events to game log for transparency |
-| **Debug Alerts** | Show alerts for all probed keys, even unchanged ones |
-| **Debug Command** | Enable the `/opsec` debug command. Off by default.
+| **Show button on multiplayer screen** | Show the `OpSec` button on the multiplayer server list. On by default — without Mod Menu this button is the only way into the settings in-game |
+
+#### Settings Screen (Streamer Mode)
+
+| Setting | Description |
+|---------|-------------|
 | **Streamer Mode** | Master switch for [Streamer Mode](#streamer-mode)'s on-screen redaction (default: off) |
 | **Hide Coordinates (F3)** | Replace the F3 position group with a placeholder (MC 1.21.11+ only, default: on) |
 | **Mask Player Names** | Replace every player's nametag/tab-list name, including your own (default: on) |
 | **Name Mask Style** | **Hidden** (fixed placeholder) or **Glyphs** (rotating, default) — see [Streamer Mode](#streamer-mode) |
 
-#### Accounts Tab
+#### Settings Screen (Alerts & Logging)
+
+| Setting | Description |
+|---------|-------------|
+| **Show Alerts** | Display chat messages when tracking is detected |
+| **Show Toasts** | Display popup notifications for important events |
+| **Log Detections** | Log all detection events to game log for transparency |
+| **Log Scrubber** | Strip token-shaped strings from logged authentication errors |
+| **Jar Integrity Check** | Check this mod's own jar hash against the published release |
+| **Debug Alerts** | Show alerts for all probed keys, even unchanged ones |
+| **Debug Command** | Enable the `/opsec` debug command. Off by default. |
+| **Trust This Server (Skip Auto-Purge)** | Exempt the currently-connected server's pack-cache bucket from [Auto-Purge](#auto-purge-pack-cache-on-exit). Only shown while connected to a server. |
+| **Clear Cached Resource Packs** | Delete the cached server resource packs. Buckets of servers you have trusted are kept. |
+
+#### Account Manager
 
 | Setting | Description |
 |---------|-------------|
@@ -153,13 +199,14 @@ If settings are changed while connected to a server it is recommended to reconne
 | **Add Session Token** | Add a new account using a session (access) token |
 | **Import** | Import accounts from a JSON file |
 | **Export** | Export accounts to a JSON file |
+| **Auto-randomize new accounts** | Randomize the skin and cape of every account you add from now on |
 | **Randomize Skin** | Uploads a procedurally-generated flat-color skin for the currently logged-in account, via Mojang's official skin API |
-| **Randomize Cape** | Picks a random cape from the ones the current account actually owns (or clears it) |
+| **Randomize Cape** | Picks one of the capes the current account actually owns (or clears it) |
 | **Random name button** | On the offline/cracked account screen — fills the username field with a randomly generated name |
 
 ### Debug Commands
 
-The `/opsec` command is **off by default** (enable it in Misc → Debug Command). When enabled, use `/opsec` in-game to access debug information:
+The `/opsec` command is **off by default** (enable it in Settings → Alerts & Logging → Debug Command). When enabled, use `/opsec` in-game to access debug information:
 
 | Command | Description |
 |---------|-------------|
@@ -177,7 +224,7 @@ The `/opsec` command is **off by default** (enable it in Misc → Debug Command)
 ## Known Issues
 
 - **NeoForge builds don't offer Mod Whitelist's AUTO mode** — NeoForge has no equivalent to Fabric's global network-channel registry, so there's no way to scan installed mods for "has a server channel" the way AUTO mode does on Fabric. Use **BLOCK ALL** or **CUSTOM** instead; every other protection feature works the same as Fabric. NeoForge builds are also newer and less battle-tested overall — please report issues.
-- **HUD Indicator on 26.1+ is less battle-tested** than on 1.20.1-1.21.11 (which renders via a direct Mixin). See the [Miscellaneous Tab](#miscellaneous-tab) table above.
+- **HUD Indicator on 26.1+ is less battle-tested** than on 1.20.1-1.21.11 (which renders via a direct Mixin). See the [Settings Screen (Appearance)](#settings-screen-appearance) table above.
 - **On 26.3 specifically**, two features are scaled back rather than shipped as an unverified guess, since MC 26.3 changed a lot at once (authlib 9.x→10.x, GLFW→SDL windowing, and a resource-pack composition rework):
   - **Bypass Server Pack Requirement / Strip Mod Shader Overrides don't apply.** 26.3 replaced how server packs are opened internally (`openPrimary`/`openFull` → `openMetadata`/`openResources` returning a `Stream<PackResources>`) — a real architecture change, not a signature tweak, and not something to wrap correctly on a guess without a server actually pushing a pack to test against. Every other protection feature is unaffected.
   - **Account Import/Export uses a fixed file path instead of a native file picker** — 26.3 dropped the `lwjgl-tinyfd` module entirely (window backend moved to SDL). Import reads from, and Export writes to, `opsec-accounts-import.json` / `opsec-accounts-export.json` in your Minecraft config folder.
@@ -186,6 +233,24 @@ The `/opsec` command is **off by default** (enable it in Misc → Debug Command)
 - **Cloudflare Ping Relay requires MC 1.20.6+** — `ServerStatusPinger.pingServer`'s callback shape before that version isn't special-cased, so Lazy Server List Ping just blocks (no relay) on 1.20.1/1.20.2/1.20.4.
 
 ## Feature Details
+
+### Per-Server Rules
+
+Every protection option used to be global — one setting applied to every server you joined. That is wrong for a lot of servers: a server you play on daily and trust doesn't need the same lockdown as a server you're passing through once, and a server you barely trust may want *more* than the global baseline.
+
+Rules replace that with per-server settings. Each rule carries its own complete copy of the options, so two rules never share state:
+
+- **EXACT** matches the address you typed, optionally with `:port` — `play.example.com:25565`.
+- **REGEX** matches with a Java regular expression that must fully match the address — `.*\.example\.com`.
+- **IP** matches the address the hostname actually resolved to, so a rule survives a DNS change under a name you control.
+
+A rule's **Applies To** field takes a comma-separated list, so one rule can cover a whole set of servers. In REGEX mode each entry is matched separately; a literal comma inside a regex is written `\x2c`, because a bare comma would otherwise be read as a separator.
+
+Rules are evaluated in order and the first match wins, so you can put specific rules above broad ones. A mandatory **Default (all servers)** rule always sits at the end as the fallback: it holds the client-wide baseline, is always enabled, and can neither be deleted nor reordered. A disabled rule never matches, so you can park one without losing it.
+
+The baseline itself still exists — it's the Default rule's settings. Changing a value there affects every server that no other rule claims.
+
+---
 
 ### Client Spoofer
 
@@ -271,11 +336,11 @@ On by default (MC 1.20.2+, when `CommandHistory` was introduced — older versio
 
 [Isolate Pack Cache](#isolate-pack-cache) buckets downloaded packs per account (and per server), but an isolated cache is still an artifact sitting on disk between sessions.
 
-When enabled, OpSec wipes `downloads/` and `server-resource-packs/` on client shutdown, reusing the same cache-clearing logic as the manual **Clear Cache** button.
+When enabled, OpSec wipes `downloads/` and `server-resource-packs/` on client shutdown, reusing the same cache-clearing logic as the manual **Clear Cached Resource Packs** button.
 
 Off by default — packs simply re-download next time you connect.
 
-**Trust This Server (Skip Auto-Purge)** (per-server, in the Server Profile section): exempts the currently-connected server's isolated pack-cache bucket from this purge, independent of the Auto-Purge toggle itself (global or per-server-profile). Use it for a server you trust enough to want pack caching to actually persist across sessions, without turning off the purge for everyone else.
+**Trust This Server (Skip Auto-Purge)**: exempts the connected server's isolated pack-cache bucket from this purge, independent of the Auto-Purge toggle itself. Use it for a server you trust enough to want pack caching to actually persist across sessions, without turning off the purge for everyone else.
 
 ---
 
@@ -512,7 +577,7 @@ Purely visual, on-screen redaction for content creators — it doesn't change an
   
   Hooks the same `PlayerInfo.getTabListDisplayName()` field vanilla's own tab list checks before falling back to the raw profile name — third-party tab-list replacements (BetterTab and similar) read this exact field too, so the mask applies there as well, not just to vanilla's own rendering. Does not yet cover names baked into chat message text.
 
-Off by default. Enable from the Misc tab.
+Off by default. Enable it in the client-wide **Settings** screen, under **Streamer Mode**.
 
 ---
 
@@ -522,7 +587,7 @@ Routes the *actual multiplayer connection* — not just this mod's own outbound 
 
 Minecraft's bundled `netty-handler` jar excludes `io.netty.handler.proxy.*`, so both handshakes (SOCKS5 per RFC 1928/1929, and HTTP `CONNECT`) are implemented from scratch rather than relying on Netty's own proxy support. Vanilla's own pipeline construction, compression setup, and worker-group selection are left completely untouched — only the actual TCP dial target is swapped to the proxy, with the handshake handler prepended to the pipeline to tunnel to the real server transparently.
 
-Off by default — this is a real behavior change to the connection itself, not a passive redaction. Enable from the Protection tab, then **Configure Proxy...** for host/port/credentials.
+Off by default — this is a real behavior change to the connection itself, not a passive redaction. Enable it on the rule for that server, then use the rule's **Proxy** button for host/port/credentials.
 
 ---
 

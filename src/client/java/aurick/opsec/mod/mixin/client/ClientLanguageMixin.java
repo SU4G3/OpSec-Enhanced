@@ -138,8 +138,12 @@ public class ClientLanguageMixin {
         String serverPackId = pack.packId();
         if (opsec$isServerPackId(serverPackId)) {
             Set<String> serverKeys = new HashSet<>();
+            boolean isEnUs = "en_us".equals(id);
             original.call(stream, (BiConsumer<String, String>) (key, value) -> {
                 ModRegistry.recordServerPackTranslation(key, value);
+                if (isEnUs) {
+                    ModRegistry.recordServerPackEnUsTranslation(key, value);
+                }
                 serverKeys.add(key);
                 output.accept(key, value);
             });

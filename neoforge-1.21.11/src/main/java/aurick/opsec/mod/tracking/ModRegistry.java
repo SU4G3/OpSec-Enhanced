@@ -16,8 +16,10 @@ import net.minecraft.resources.Identifier;
 /*import net.minecraft.resources.ResourceLocation;
 *///?}
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,17 @@ public class ModRegistry {
 
     /** Server pack translations: key → value. Returned at block time so a mod lang beating the pack in {@code ClientLanguage.storage} can't expose us. Atomic-swapped per reload. */
     private static volatile Map<String, String> serverPackTranslations =
+        new ConcurrentHashMap<>();
+
+    /**
+     * Server pack translations for the {@code en_us} locale specifically, kept apart from
+     * {@link #serverPackTranslations} (which holds the pack values for the player's
+     * actually-selected locale). The Client Information Normalizer claims {@code en_us},
+     * so the en_us variant is the only pack value a server may observe from that client
+     * — a pack value in the player's real locale contradicts the claimed locale.
+     * Atomic-swapped per reload, same rationale as {@link #serverPackTranslations}.
+     */
+    private static volatile Map<String, String> serverPackEnUsTranslations =
         new ConcurrentHashMap<>();
 
     /**
@@ -214,6 +227,45 @@ public Set<Identifier> getChannels() { return Collections.unmodifiableSet(channe
     }
 
     /**
+     * One mod as the loader currently sees it: the stable mod id plus the name to show
+     * the user. The UI needs both, but only the id is used for matching.
+     */
+    public static final class InstalledMod {
+        private final String modId;
+        private final String displayName;
+
+        InstalledMod(String modId, String displayName) {
+            this.modId = modId;
+            this.displayName = displayName;
+        }
+
+        public String getModId() {
+            return modId;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
+    /**
+     * Every installed top-level mod, sorted by display name. Platform entries are
+     * excluded: they are not mods the user can put on a whitelist.
+     */
+    public static List<InstalledMod> getInstalledMods() {
+        List<InstalledMod> mods = new ArrayList<>();
+        for (IModInfo container : ModList.get().getMods()) {
+            String modId = container.getModId();
+            if (PLATFORM_MODS.contains(modId)) {
+                continue;
+            }
+            mods.add(new InstalledMod(modId, container.getDisplayName()));
+        }
+        mods.sort(Comparator.comparing(InstalledMod::getDisplayName, String.CASE_INSENSITIVE_ORDER));
+        return mods;
+    }
+
+    /**
      * Resolve display name from Fabric mod metadata.
      */
     private static String resolveDisplayName(String modId) {
@@ -233,6 +285,7 @@ public Set<Identifier> getChannels() { return Collections.unmodifiableSet(channe
     private static final class TranslationRebuildStaging {
         final Set<String> vanilla = ConcurrentHashMap.newKeySet();
         final Map<String, String> serverPackTranslations = new ConcurrentHashMap<>();
+        final Map<String, String> serverPackEnUs = new ConcurrentHashMap<>();
         final Map<String, String> translationKeyToModId = new ConcurrentHashMap<>();
         final Map<String, String> vanillaEnUs = new ConcurrentHashMap<>();
     }
@@ -277,12 +330,13 @@ public Set<Identifier> getChannels() { return Collections.unmodifiableSet(channe
         // see a fully-populated set/map (either the old or the new one).
         vanillaTranslationKeys = s.vanilla;
         serverPackTranslations = s.serverPackTranslations;
+        serverPackEnUsTranslations = s.serverPackEnUs;
         translationKeyToModId = s.translationKeyToModId;
         vanillaEnUsValues = s.vanillaEnUs;
         rebuildStaging.remove();
         Opsec.LOGGER.debug(
-            "[ModRegistry] Committed translation rebuild: {} vanilla, {} server pack, {} en_us",
-            s.vanilla.size(), s.serverPackTranslations.size(), s.vanillaEnUs.size()
+            "[ModRegistry] Committed translation rebuild: {} vanilla, {} server pack, {} server pack en_us, {} en_us",
+            s.vanilla.size(), s.serverPackTranslations.size(), s.serverPackEnUs.size(), s.vanillaEnUs.size()
         );
     }
 
@@ -348,6 +402,18 @@ public Set<Identifier> getChannels() { return Collections.unmodifiableSet(channe
             s.serverPackTranslations.put(key, value);
         } else {
             serverPackTranslations.put(key, value);
+        }
+    }
+
+    /** Record a server pack translation key and its pack-defined {@code en_us} value. */
+    public static void recordServerPackEnUsTranslation(String key, String value) {
+        if (key == null || value == null) return;
+
+        TranslationRebuildStaging s = rebuildStaging.get();
+        if (s != null) {
+            s.serverPackEnUs.put(key, value);
+        } else {
+            serverPackEnUsTranslations.put(key, value);
         }
     }
 
@@ -861,6 +927,11 @@ public Set<Identifier> getChannels() { return Collections.unmodifiableSet(channe
         return key == null ? null : serverPackTranslations.get(key);
     }
 
+    /** The server pack's {@code en_us} value for a key, or {@code null} if the pack defines none. */
+    public static String getServerPackEnUsTranslation(String key) {
+        return key == null ? null : serverPackEnUsTranslations.get(key);
+    }
+
     /**
      * Clear translation key caches. Called on language reload.
      * Also clears server pack translations so that keys from unloaded
@@ -872,6 +943,7 @@ public Set<Identifier> getChannels() { return Collections.unmodifiableSet(channe
         }
         vanillaTranslationKeys.clear();
         serverPackTranslations.clear();
+        serverPackEnUsTranslations.clear();
         translationKeyToModId.clear();
         Opsec.LOGGER.debug(
             "[ModRegistry] Cleared translation key cache (including server pack keys)"

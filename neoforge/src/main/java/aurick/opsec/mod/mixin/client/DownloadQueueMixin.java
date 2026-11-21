@@ -74,7 +74,7 @@ public class DownloadQueueMixin {
     // on-disk folder to preserve.
     private static String opsec$serverBucket() {
         return aurick.opsec.mod.protection.ResourcePackGuard.hashServerBucket(
-            OpsecConfig.getInstance().getCurrentServer());
+            OpsecConfig.getInstance().getCurrentServerKey());
     }
 }
 //?} else {

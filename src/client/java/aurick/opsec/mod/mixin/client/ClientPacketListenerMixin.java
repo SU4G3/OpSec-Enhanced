@@ -5,18 +5,24 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import aurick.opsec.mod.Opsec;
 import aurick.opsec.mod.PrivacyLogger;
 import aurick.opsec.mod.config.OpsecConfig;
+import aurick.opsec.mod.detection.AepProbeDetector;
 import aurick.opsec.mod.detection.PacketContext;
+import aurick.opsec.mod.net.ServerTargets;
 import aurick.opsec.mod.protection.PackStripHandler;
 import aurick.opsec.mod.protection.PackStripOverlay;
 import aurick.opsec.mod.protection.TranslationProtectionHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.Connection;
 import net.minecraft.network.PacketListener;
 import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.network.chat.SignedMessageBody;
 import net.minecraft.network.chat.SignedMessageChain;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
+import net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket;
 //? if <1.20.2 {
 /*import aurick.opsec.mod.detection.TrackPackDetector;
 import aurick.opsec.mod.lang.OpsecLang;
@@ -32,6 +38,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -100,22 +108,58 @@ public abstract class ClientPacketListenerMixin {
     @Inject(method = "handleLogin", at = @At("TAIL"))
     private void onLogin(ClientboundLoginPacket packet, CallbackInfo ci) {
         ClientPacketListener listener = (ClientPacketListener)(Object)this;
-        String serverAddress = listener.getConnection().getRemoteAddress().toString();
+        Connection connection = listener.getConnection();
 
-        if (serverAddress.startsWith("/")) {
-            serverAddress = serverAddress.substring(1);
+        // The bound target is the address the player typed plus the address it resolved
+        // to. The connection's own remote address is the proxy's address when the game
+        // proxy is in use, so it can only serve as the fallback.
+        ServerTargets.Target target = ServerTargets.boundTo(connection);
+        String host = target != null ? target.host() : null;
+        String ip = target != null ? target.ip() : null;
+        int port = target != null ? target.port() : 0;
+
+        if (ip == null) {
+            SocketAddress remote = connection.getRemoteAddress();
+            if (remote instanceof InetSocketAddress inet) {
+                if (inet.getAddress() != null) {
+                    ip = inet.getAddress().getHostAddress();
+                }
+                port = inet.getPort();
+            }
         }
-        int colonIndex = serverAddress.lastIndexOf(':');
-        if (colonIndex > 0) {
-            serverAddress = serverAddress.substring(0, colonIndex);
+        if (host == null || host.isEmpty()) {
+            host = ip;
         }
 
-        OpsecConfig.getInstance().setCurrentServer(serverAddress);
+        OpsecConfig.getInstance().setCurrentServer(host, port, ip);
 
         // Schedule port scan summary after 2 seconds
         opsec$pendingTask = opsec$getScheduler().schedule(() -> {
             Minecraft.getInstance().execute(PrivacyLogger::showPortScanSummary);
         }, 2, TimeUnit.SECONDS);
+    }
+
+    /**
+     * AntiExploitPreventer's TranslationChecker plants a sign on the player's feet block
+     * and then opens the sign editor at that position to harvest the text the client
+     * sends back. The editor is left alone on purpose — cancelling it would make this
+     * client behave unlike any vanilla client and pin the server's checker thread; the
+     * text the probe is after is already reduced to the raw key by the translation
+     * protection.
+     */
+    @Inject(method = "handleBlockUpdate", at = @At("HEAD"))
+    private void opsec$onBlockUpdate(ClientboundBlockUpdatePacket packet, CallbackInfo ci) {
+        AepProbeDetector.onBlockUpdate(packet.getPos(), packet.getBlockState());
+    }
+
+    @Inject(method = "handleOpenSignEditor", at = @At("HEAD"))
+    private void opsec$onOpenSignEditor(ClientboundOpenSignEditorPacket packet, CallbackInfo ci) {
+        //? if >=26.3 {
+        /*BlockPos pos = packet.pos();*/
+        //?} else {
+        BlockPos pos = packet.getPos();
+        //?}
+        AepProbeDetector.onOpenSignEditor(pos);
     }
 
     //? if <1.20.2 {
@@ -160,8 +204,11 @@ public abstract class ClientPacketListenerMixin {
     private void onClose(CallbackInfo ci) {
         opsec$shutdownScheduler();
         PrivacyLogger.resetPortScanTracking();
+        PrivacyLogger.resetBurstTracking();
         PrivacyLogger.clearCooldowns();
-        OpsecConfig.getInstance().setCurrentServer(null);
+        AepProbeDetector.reset();
+        OpsecConfig.getInstance().setCurrentServer(null, 0, null);
+        ServerTargets.unbind(((ClientPacketListener)(Object)this).getConnection());
         PackStripHandler.clearAll();
         PackStripOverlay.clearQueue();
     }

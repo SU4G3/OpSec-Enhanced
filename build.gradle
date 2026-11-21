@@ -13,6 +13,13 @@ def minecraft_version = property("minecraft_version")
 def minecraft_version_range = findProperty("minecraft_version_range") ?: ">=1.21.1"
 def version_suffix = findProperty("version_suffix") ?: minecraft_version
 def isUnobfuscated = (findProperty("minecraft_version")?.toString() ?: "").startsWith("26")
+// The runtime dependency is pinned to an EXACT Cloth Config version, never a range.
+// The CC release line is not semver-safe across MC lines: 21.11.160 declares
+// ">=1.21.9-" (which numerically admits 26.x) but its jar still ships the old
+// render(GuiGraphics,...) path and references net.minecraft.resources.Identifier,
+// which does not exist on 1.21.9/1.21.10. A range would silently resolve that
+// jar onto 1.21.9 and crash at runtime with NoClassDefFoundError.
+def clothConfigVersionRange = property('cloth_config_version').toString()
 
 // Numeric semver compare for Stonecutter-style gating in resources.
 // Stonecutter handles per-file directives in .java, but its default config
@@ -142,6 +149,7 @@ repositories {
     maven { url = "https://maven.terraformersmc.com/"; name = "Terraformers" }
     maven { url = "https://repo.spongepowered.org/repository/maven-public/"; name = "Sponge" }
     maven { url = "https://maven.bawnorton.com/releases"; name = "Bawnorton" }
+    maven { url = "https://maven.shedaniel.me/"; name = "Shedaniel" }
 }
 
 dependencies {
@@ -157,12 +165,14 @@ dependencies {
     if (isUnobfuscated) {
         implementation(loaderCoord)
         implementation(apiCoord)
+        implementation("me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}")
         implementation("com.terraformersmc:modmenu:${modmenu_version}") {
             exclude group: "eu.pb4", module: "placeholder-api"
         }
     } else {
         modImplementation(loaderCoord)
         modImplementation(apiCoord)
+        modImplementation("me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}")
         modImplementation("com.terraformersmc:modmenu:${modmenu_version}") {
             exclude group: "eu.pb4", module: "placeholder-api"
         }
@@ -178,6 +188,7 @@ tasks.withType(ProcessResources).configureEach {
     def mixinCompatLevel = "JAVA_${javaVersion}"
     inputs.property("version", project.version)
     inputs.property("minecraft_version_range", minecraft_version_range)
+    inputs.property("cloth_config_version_range", clothConfigVersionRange)
     inputs.property("mixin_compat_level", mixinCompatLevel)
     inputs.property("java_version", javaVersion.toString())
     inputs.property("known_packs_mixin_entry", knownPacksMixinEntry)
@@ -192,6 +203,7 @@ tasks.withType(ProcessResources).configureEach {
         expand(
             "version": project.version,
             "minecraft_version_range": minecraft_version_range,
+            "cloth_config_version_range": clothConfigVersionRange,
             "mixin_compat_level": mixinCompatLevel,
             "java_version": javaVersion.toString(),
             "known_packs_mixin_entry": knownPacksMixinEntry,

@@ -68,9 +68,9 @@ public final class KeybindDefaults {
     }
 
     /**
-     * Get the vanilla default display string for a keybind key, resolved against
-     * the current {@link net.minecraft.locale.Language} instance. Returns null if
-     * the key is not a known vanilla keybind.
+     * Get the vanilla default display string for a keybind key, resolved against the
+     * current {@link net.minecraft.locale.Language} instance. Returns null if the key
+     * is not a known vanilla keybind.
      */
     public static String getDefault(String key) {
         if (!initialized) {
@@ -78,6 +78,28 @@ public final class KeybindDefaults {
         }
         InputConstants.Key defaultKey = defaultKeys.get(key);
         return defaultKey == null ? null : defaultKey.getDisplayName().getString();
+    }
+
+    /**
+     * Get the vanilla default display string for a keybind key, resolved against the
+     * game's own built-in {@code en_us} table instead of the player's selected locale.
+     *
+     * <p>Used by the Client Information Normalizer: it claims {@code language: "en_us"}
+     * in the outgoing {@code ClientInformation}, so every server-observable string has to
+     * be en_us as well. A keybind rendered in the player's real locale contradicts that
+     * claim, and that mismatch is exactly what a server-side "keybind response doesn't
+     * match the expected locale" check looks for.</p>
+     *
+     * @return the en_us default, or null if the key is not a known vanilla keybind
+     */
+    public static String getDefaultEnUs(String key) {
+        if (!initialized) {
+            initialize();
+        }
+        InputConstants.Key defaultKey = defaultKeys.get(key);
+        if (defaultKey == null) return null;
+        String displayKey = "key.keyboard." + defaultKey.getName();
+        return VanillaEnUsLanguage.get(displayKey, defaultKey.getDisplayName().getString());
     }
 
     /**

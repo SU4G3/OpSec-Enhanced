@@ -72,6 +72,56 @@ public class PrivacyLogger {
         public String getIcon() { return icon; }
     }
     
+    /**
+     * Per-category burst guard. A hostile server can fire one probe category hundreds of
+     * times per second — AntiExploitPreventer plants one ghost sign per known mod
+     * translation key — so repeated alerts inside the window are dropped from the
+     * chat/toast pipeline while every event is still recorded by
+     * {@link #logDetection(String, String)}.
+     */
+    private static final int BURST_LIMIT = 5;
+    private static final long BURST_WINDOW_MS = 5_000L;
+    private static final Map<String, BurstWindow> burstWindows = new ConcurrentHashMap<>();
+
+    private static final class BurstWindow {
+        final long start;
+        int count;
+
+        BurstWindow(long start) {
+            this.start = start;
+        }
+    }
+
+    /**
+     * Counts one event in {@code category}'s burst window and reports whether the event is
+     * still inside the alert budget. The counter advances on every call, so callers must
+     * invoke this exactly once per detected event.
+     */
+    public static boolean withinBurst(String category) {
+        long now = System.currentTimeMillis();
+        BurstWindow window = burstWindows.compute(category, (key, current) -> {
+            if (current == null || now - current.start >= BURST_WINDOW_MS) {
+                BurstWindow fresh = new BurstWindow(now);
+                fresh.count = 1;
+                return fresh;
+            }
+            current.count++;
+            return current;
+        });
+        return window.count <= BURST_LIMIT;
+    }
+
+    /** Alert for probe categories a hostile server can flood: every event is logged, only the first {@link #BURST_LIMIT} reach chat. */
+    public static void alertThrottled(AlertType type, String category, String message) {
+        logDetection(category, message);
+        if (!withinBurst(category)) return;
+        alert(type, message);
+    }
+
+    public static void resetBurstTracking() {
+        burstWindows.clear();
+    }
+
     public static void alert(AlertType type, String message) {
         if (!OpsecConfig.getInstance().shouldShowAlerts()) return;
         sendMessage(type, message);

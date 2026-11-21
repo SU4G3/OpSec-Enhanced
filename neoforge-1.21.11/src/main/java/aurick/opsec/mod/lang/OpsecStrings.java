@@ -54,20 +54,12 @@ public final class OpsecStrings {
 
     public static final String SECTION_APPEARANCE = "opsec.section.appearance";
     public static final String OPTION_ACCENT_COLOR = "opsec.option.accentColor";
-    public static final String OPTION_HALLOWEEN_THEME = "opsec.option.halloweenTheme";
-    public static final String TOOLTIP_HALLOWEEN_THEME = "opsec.option.halloweenTheme.tooltip";
-    public static final String OPTION_CHRISTMAS_THEME = "opsec.option.christmasTheme";
-    public static final String TOOLTIP_CHRISTMAS_THEME = "opsec.option.christmasTheme.tooltip";
-    public static final String OPTION_WALLPAPER_MODE = "opsec.option.wallpaperMode";
-    public static final String TOOLTIP_WALLPAPER_MODE = "opsec.option.wallpaperMode.tooltip";
-    public static final String WALLPAPER_MODE_OFF = "opsec.option.wallpaperMode.off";
-    public static final String WALLPAPER_MODE_AUTO = "opsec.option.wallpaperMode.auto";
-    public static final String WALLPAPER_MODE_HALLOWEEN = "opsec.option.wallpaperMode.halloween";
-    public static final String WALLPAPER_MODE_CHRISTMAS = "opsec.option.wallpaperMode.christmas";
     public static final String OPTION_COMPACT_LAYOUT = "opsec.option.compactLayout";
     public static final String TOOLTIP_COMPACT_LAYOUT = "opsec.option.compactLayout.tooltip";
     public static final String OPTION_SHOW_HUD = "opsec.option.showHud";
     public static final String TOOLTIP_SHOW_HUD = "opsec.option.showHud.tooltip";
+    public static final String OPTION_SHOW_MULTIPLAYER_BUTTON = "opsec.option.showMultiplayerButton";
+    public static final String TOOLTIP_SHOW_MULTIPLAYER_BUTTON = "opsec.option.showMultiplayerButton.tooltip";
 
     public static final String SECTION_SERVER_PROFILE = "opsec.section.serverProfile";
     public static final String OPTION_SERVER_PROFILE = "opsec.option.serverProfile";
@@ -210,6 +202,8 @@ public final class OpsecStrings {
     // Key-resolution probe alert + toast + one-time hint
     public static final String ALERT_KEYRESOLUTION = "opsec.alert.keyresolution";
     public static final String TOAST_KEYRESOLUTION = "opsec.toast.keyresolution";
+    public static final String ALERT_AEP_GHOST_SIGN = "opsec.alert.aep.ghostSign";
+    public static final String TOAST_AEP_PROBING = "opsec.toast.aep.probing";
     public static final String HINT_ALERTS_CAN_BE_DISABLED = "opsec.hint.alertsCanBeDisabled";
 
     // /opsec command output
@@ -344,4 +338,45 @@ public final class OpsecStrings {
     public static final String TOOLTIP_STREAMER_NAME_STYLE = "opsec.option.streamerNameStyle.tooltip";
     public static final String NAME_STYLE_HIDDEN = "opsec.option.streamerNameStyle.hidden";
     public static final String NAME_STYLE_GLYPHS = "opsec.option.streamerNameStyle.glyphs";
+
+    // Hub screen
+    public static final String SCREEN_HUB_TITLE = "opsec.screen.hub.title";
+    public static final String HUB_RULE_SETTINGS = "opsec.hub.ruleSettings";
+    public static final String HUB_RULE_SETTINGS_DESC = "opsec.hub.ruleSettings.desc";
+    public static final String HUB_ACCOUNT_MANAGER = "opsec.hub.accountManager";
+    public static final String HUB_ACCOUNT_MANAGER_DESC = "opsec.hub.accountManager.desc";
+    public static final String HUB_CONNECTED = "opsec.hub.connected";
+    public static final String HUB_NOT_CONNECTED = "opsec.hub.notConnected";
+    public static final String HUB_SETTINGS = "opsec.hub.settings";
+    public static final String HUB_SETTINGS_DESC = "opsec.hub.settings.desc";
+
+    // Global settings screen
+    public static final String SCREEN_SETTINGS_TITLE = "opsec.screen.settings.title";
+
+    // Rule editor screen
+    public static final String SCREEN_RULE_SETTINGS_TITLE = "opsec.screen.ruleSettings.title";
+    public static final String SCREEN_ACCOUNT_MANAGER_TITLE = "opsec.screen.accountManager.title";
+    public static final String SECTION_PROTECTION = "opsec.section.protection";
+    public static final String SECTION_MISC = "opsec.section.misc";
+    public static final String RULE_EDITING_BANNER = "opsec.rule.editingBanner";
+    public static final String RULE_ANY_LABEL = "opsec.rule.any.label";
+    public static final String RULE_ANY_DESCRIPTION = "opsec.rule.any.description";
+    public static final String RULE_MATCH_TYPE = "opsec.rule.matchType";
+    public static final String RULE_MATCH_TYPE_TOOLTIP = "opsec.rule.matchType.tooltip";
+    public static final String RULE_APPLIES_TO = "opsec.rule.appliesTo";
+    public static final String RULE_APPLIES_TO_TOOLTIP = "opsec.rule.appliesTo.tooltip";
+    public static final String RULE_ENABLED = "opsec.rule.enabled";
+    public static final String RULE_ERROR_NO_PATTERN = "opsec.rule.error.noPattern";
+    public static final String RULE_ERROR_BAD_REGEX = "opsec.rule.error.badRegex";
+    public static final String RULE_ADD = "opsec.rule.add";
+    public static final String RULE_DELETE = "opsec.rule.delete";
+    public static final String RULE_MOVE_UP = "opsec.rule.moveUp";
+    public static final String RULE_MOVE_DOWN = "opsec.rule.moveDown";
+    public static final String RULE_TOOLS_LUNAR = "opsec.rule.tools.lunar";
+    public static final String RULE_TOOLS_RELAY = "opsec.rule.tools.relay";
+    public static final String RULE_TOOLS_PROXY = "opsec.rule.tools.proxy";
+    public static final String RULE_DISABLED_PREFIX = "opsec.rule.disabledPrefix";
+    public static final String RULE_CLOUDFLARE_RELAY = "opsec.rule.cloudflareRelay";
+    public static final String RULE_GAME_PROXY = "opsec.rule.gameProxy";
+    public static final String WHITELIST_NOT_INSTALLED_TITLE = "opsec.whitelist.notInstalled";
 }

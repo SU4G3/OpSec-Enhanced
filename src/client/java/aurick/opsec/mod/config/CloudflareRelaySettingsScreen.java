@@ -23,6 +23,7 @@ public class CloudflareRelaySettingsScreen extends Screen {
 
     private final Screen parent;
     private final OpsecConfig config;
+    private final SpoofSettings settings;
     private EditBox apiTokenInput;
     private EditBox accountIdInput;
     private EditBox urlInput;
@@ -31,10 +32,11 @@ public class CloudflareRelaySettingsScreen extends Screen {
     private Button deployButton;
     private boolean deploying = false;
 
-    public CloudflareRelaySettingsScreen(Screen parent, OpsecConfig config) {
+    public CloudflareRelaySettingsScreen(Screen parent, OpsecConfig config, SpoofSettings settings) {
         super(Component.literal("Cloudflare Ping Relay"));
         this.parent = parent;
         this.config = config;
+        this.settings = settings;
     }
 
     @Override
@@ -73,7 +75,7 @@ public class CloudflareRelaySettingsScreen extends Screen {
         this.addRenderableWidget(new StringWidget(centerX - 150, centerY + 30, 300, 10, Component.literal("Worker URL"), this.font));
         this.urlInput = new EditBox(this.font, centerX - 150, centerY + 42, 300, 20, Component.literal("Worker URL"));
         this.urlInput.setMaxLength(512);
-        this.urlInput.setValue(config.getSettings().getCloudflarePingRelayUrl());
+        this.urlInput.setValue(settings.getCloudflarePingRelayUrl());
         this.urlInput.setHint(Component.literal("https://your-worker.workers.dev"));
         this.addRenderableWidget(this.urlInput);
 
@@ -111,7 +113,6 @@ public class CloudflareRelaySettingsScreen extends Screen {
                     return;
                 }
                 urlInput.setValue(url);
-                SpoofSettings settings = config.getSettings();
                 settings.setCloudflarePingRelayUrl(url);
                 settings.setCloudflarePingRelayEnabled(true);
                 settings.setLazyServerPing(true);
@@ -127,7 +128,7 @@ public class CloudflareRelaySettingsScreen extends Screen {
             statusLabel.setMessage(Component.literal("URL must start with http:// or https://"));
             return;
         }
-        config.getSettings().setCloudflarePingRelayUrl(url);
+        settings.setCloudflarePingRelayUrl(url);
         config.save();
         this.onClose();
     }
